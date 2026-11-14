@@ -15,7 +15,7 @@ from dnsinv.graph.store import ScanInfo
 from dnsinv.queries.runner import QueryResult
 
 runner = CliRunner()
-_ANSI = re.compile(r"\[[0-9;]*m")
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def plain(text: str) -> str:
