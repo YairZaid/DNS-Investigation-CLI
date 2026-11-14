@@ -1,6 +1,7 @@
 """`dnsinv query ...`: the store and the query runner are replaced by fakes."""
 
 import json
+import re
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from urllib.parse import unquote
@@ -14,6 +15,14 @@ from dnsinv.graph.store import ScanInfo
 from dnsinv.queries.runner import QueryResult
 
 runner = CliRunner()
+_ANSI = re.compile(r"\[[0-9;]*m")
+
+
+def plain(text: str) -> str:
+    """Help text without colour codes (Typer forces colour on GitHub Actions)."""
+    return _ANSI.sub("", text)
+
+
 SCAN = ScanInfo("urls.txt", datetime(2026, 11, 14, 10, 30, tzinfo=UTC), "1.1.1.1 (default)", 9)
 ROWS = [
     {
@@ -69,16 +78,17 @@ def test_query_list_shows_every_query():
 def test_query_run_without_a_name_lists_the_queries():
     result = runner.invoke(cli.app, ["query", "run"])
 
-    assert "shared-infra" in result.output
+    assert "shared-infra" in plain(result.output)
 
 
 def test_each_query_has_its_own_help_with_its_options():
     result = runner.invoke(cli.app, ["query", "run", "shared-infra", "--help"])
 
     assert result.exit_code == 0
-    assert "--min-shared" in result.stdout
-    assert "--cross-apex" in result.stdout
-    assert "--cypher" in result.stdout
+    help_text = plain(result.stdout)
+    assert "--min-shared" in help_text
+    assert "--cross-apex" in help_text
+    assert "--cypher" in help_text
 
 
 def test_table_output_starts_with_the_scan_it_describes(graph):
