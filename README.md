@@ -27,6 +27,31 @@ The first run builds the image and starts Neo4j, waiting until it is ready (abou
 docker compose run --rm cli ingest examples/urls.txt
 ```
 
+What DNS returned for each hostname, one line per hostname:
+
+```bash
+docker compose run --rm cli records
+```
+
+```
+┆ HOSTNAME          ┆ STATUS  ┆ CNAME                       ┆ A                  ┆ AAAA                ┆ MX              ┆ TXT ┆
+├───────────────────┼─────────┼─────────────────────────────┼────────────────────┼─────────────────────┼─────────────────┼─────┤
+┆ python.org (apex) ┆ NOERROR ┆ -                           ┆ 151.101.0.223 (+3) ┆ 2a04:4e42::223 (+3) ┆ mail.python.org ┆ 13  ┆
+┆ www.python.org    ┆ NOERROR ┆ → dualstack.python.map...   ┆ 151.101.0.223 (+3) ┆ 2a04:4e42::223 (+3) ┆ -               ┆ -   ┆
+```
+
+Every record of one hostname, or one record type for all of them, in full:
+
+```bash
+docker compose run --rm cli records --hostname python.org
+```
+
+```bash
+docker compose run --rm cli records --type MX
+```
+
+Then the investigation queries:
+
 ```bash
 docker compose run --rm cli query run shared-infra --cross-apex
 ```
@@ -50,6 +75,7 @@ To delete the stored graph: `docker compose down -v`.
 | `doctor` | Checks `dig`, the resolver and Neo4j. |
 | `parse FILE` | Shows how a file is read: hostnames, apex domains, and rejected lines with the reason. No DNS, no Neo4j. |
 | `ingest FILE` | Scans every hostname and stores the result. **Replaces the graph**, so queries always describe one file at one time. `--append` combines files; `--dry-run` prints JSON instead of storing; `--resolver IP`, `--workers N`, `--no-apex`. |
+| `records` | The stored A, AAAA, MX, TXT and CNAME records: one line per hostname, the first value of each type and how many more. `--hostname NAME` shows every record of one hostname with the name that owns it; `--type MX` shows one type in full; `--inputs-only` leaves out apex domains; `--format json`. |
 | `query list` | Lists the investigation queries. |
 | `query run NAME` | Runs one. Each query has its own options (`--help`), plus `--format table\|json` and `--cypher`. |
 
@@ -62,9 +88,10 @@ From one run of `examples/urls.txt` (20 hostnames of well-known open-source and 
 **1. Most sharing between organisations goes through platforms, not through relationships.** `shared-infra --cross-apex` finds 15 assets shared between different organisations. All 15 are on shared platforms: Google's mail servers (Google Workspace handles mail for 8 of the 13 organisations) and Fastly's CDN. The `PLATFORM` and `SHARED_PLATFORM` columns exist for this reason: without them, "eight organisations share a mail server" reads like a finding.
 
 ```
-KIND         ASSET                    HOSTNAME_COUNT  APEX_COUNT  ...  PLATFORM          SHARED_PLATFORM
-mail_server  alt1.aspmx.l.google.com  10              8           ...  Google Workspace  yes
-ip           151.101.0.223            4               2           ...  Fastly            yes
+┆ KIND        ┆ ASSET                   ┆ HOSTNAME_COUNT ┆ APEX_COUNT ┆ ... ┆ PLATFORM         ┆ SHARED_PLATFORM ┆
+├─────────────┼─────────────────────────┼────────────────┼────────────┼─────┼──────────────────┼─────────────────┤
+┆ mail_server ┆ alt1.aspmx.l.google.com ┆ 10             ┆ 8          ┆ ... ┆ Google Workspace ┆ yes             ┆
+┆ ip          ┆ 151.101.0.223           ┆ 4              ┆ 2          ┆ ... ┆ Fastly           ┆ yes             ┆
 ```
 
 **2. One real relationship: `python.org` and `pypi.org`.** The two organisations share the same four Fastly IPv4 and four IPv6 addresses, and `docs.python.org` and `www.python.org` share the CNAME target `dualstack.python.map.fastly.net`. Fastly serves many customers, so the addresses alone prove nothing. But the identical address set on both domains is consistent with what is publicly known: the Python Software Foundation runs both.
@@ -91,7 +118,7 @@ URLs file ─▶ hostnames ─▶ collection ─▶ enrichment ─▶ graph ─�
 | `enrichment` | Matches records against [`providers.yaml`](src/dnsinv/enrichment/providers.yaml): infrastructure a provider operates (CNAME targets, MX hosts, published address ranges) and a domain's own claims (SPF includes, TXT verification tokens). |
 | `graph` | Writes each hostname in its own transaction; replaces or appends; removes nodes no longer reachable from an input hostname or apex domain. |
 | `queries` | Each query is one file: a Cypher body shared by a table ending and a graph ending, plus its options. The CLI builds a subcommand from it. |
-| `cli` | Commands, output formats and exit codes. The only module that knows all the others. |
+| `cli`, `output` | Commands, exit codes and output: every table goes through one function, so they all look alike. DNS text is printed as-is: rich's markup and emoji codes are switched off, because a TXT record is arbitrary text from the internet. |
 
 **Graph model**
 
@@ -144,7 +171,7 @@ The main decisions are recorded as ADRs in [docs/adr](docs/adr/). The reasoning 
 docker compose --profile dev run --rm test
 ```
 
-About 340 tests, 98% line coverage. Unit tests never touch the network: `dig` is replaced by recorded output from BIND, Unbound, 1.1.1.1 and Docker's resolver ([tests/fixtures/dig](tests/fixtures/dig/README.md)). Integration tests run against a real Neo4j that has its own throwaway container, so running them never deletes your graph. One test per query checks that the `--cypher` graph shows exactly what the table shows. GitHub Actions runs ruff, mypy, all tests, and builds the image and runs `doctor` on every push.
+About 360 tests, 97% line coverage. Unit tests never touch the network: `dig` is replaced by recorded output from BIND, Unbound, 1.1.1.1 and Docker's resolver ([tests/fixtures/dig](tests/fixtures/dig/README.md)). Integration tests run against a real Neo4j that has its own throwaway container, so running them never deletes your graph. One test per query checks that the `--cypher` graph shows exactly what the table shows. GitHub Actions runs ruff, mypy, all tests, and builds the image and runs `doctor` on every push.
 
 ## Running without Docker
 
@@ -158,4 +185,4 @@ pip install .
 NEO4J_URI=bolt://localhost:7687 NEO4J_USER=neo4j NEO4J_PASSWORD=your-password dnsinv doctor
 ```
 
-For development, [uv](https://docs.astral.sh/uv/) installs the exact locked versions: `uv sync`.
+For development, [uv](https://docs.astral.sh/uv/) installs the exact locked versions: `uv sync`. Docker builds the image once and reuses it; after changing the code, rebuild it with `docker compose build`.

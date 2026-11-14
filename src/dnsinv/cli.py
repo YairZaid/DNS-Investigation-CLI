@@ -27,8 +27,10 @@ from dnsinv.enrichment.catalog import load_catalog
 from dnsinv.enrichment.enrich import enrich
 from dnsinv.errors import EXIT_ENVIRONMENT, EXIT_USAGE, DnsInvError, UsageError
 from dnsinv.graph.connection import check_neo4j
+from dnsinv.graph.records import RECORD_TYPES, HostnameRecords, load_records
 from dnsinv.graph.store import GraphCounts, ScanInfo, open_store
-from dnsinv.hostnames import ParsedInput, read_input_file
+from dnsinv.hostnames import InvalidHostnameError, ParsedInput, extract_hostname, read_input_file
+from dnsinv.output import cell, print_table, shorten
 from dnsinv.queries import all_queries
 from dnsinv.queries.base import Query, inline_params
 from dnsinv.queries.runner import QueryResult, run_query
@@ -44,6 +46,11 @@ app = typer.Typer(
 )
 
 _MARKS = {CheckStatus.OK: "OK  ", CheckStatus.WARN: "WARN", CheckStatus.FAIL: "FAIL"}
+
+
+class OutputFormat(StrEnum):
+    TABLE = "table"
+    JSON = "json"
 
 
 @app.callback()
@@ -211,19 +218,19 @@ def _scan_with_progress(
 
 def _print_parsed(result: ParsedInput) -> None:
     if result.hostnames:
-        width = max(len(h.name) for h in result.hostnames)
-        typer.echo(f"Hostnames ({len(result.hostnames)})")
-        typer.echo(f"  {'LINE':>4}  {'HOSTNAME':<{width}}  APEX")
-        for h in result.hostnames:
-            typer.echo(f"  {h.line_number:>4}  {h.name:<{width}}  {h.apex or '-'}")
+        print_table(
+            ["LINE", "HOSTNAME", "APEX"],
+            [[str(h.line_number), h.name, h.apex or "-"] for h in result.hostnames],
+            title=f"Hostnames ({len(result.hostnames)})",
+        )
     if result.rejected:
-        width = max(len(r.text) for r in result.rejected)
-        typer.echo(f"\nRejected lines ({len(result.rejected)})")
-        typer.echo(f"  {'LINE':>4}  {'TEXT':<{width}}  REASON")
-        for r in result.rejected:
-            typer.echo(f"  {r.line_number:>4}  {r.text:<{width}}  {r.reason}")
+        print_table(
+            ["LINE", "TEXT", "REASON"],
+            [[str(r.line_number), r.text, r.reason] for r in result.rejected],
+            title=f"Rejected lines ({len(result.rejected)})",
+        )
     typer.echo(
-        f"\n{len(result.hostnames)} hostnames, {len(result.rejected)} rejected, "
+        f"{len(result.hostnames)} hostnames, {len(result.rejected)} rejected, "
         f"{result.duplicate_lines} duplicates, {result.skipped_lines} blank or comment lines"
     )
 
@@ -252,6 +259,154 @@ def doctor(
         raise typer.Exit(EXIT_ENVIRONMENT)
 
 
+# ---- records ----------------------------------------------------------------------
+
+
+class RecordTypeChoice(StrEnum):
+    CNAME = "CNAME"
+    A = "A"
+    AAAA = "AAAA"
+    MX = "MX"
+    TXT = "TXT"
+
+
+@app.command()
+def records(
+    hostname: Annotated[
+        str | None,
+        typer.Option("--hostname", help="Show every record of one hostname, in full."),
+    ] = None,
+    record_type: Annotated[
+        RecordTypeChoice | None,
+        typer.Option("--type", case_sensitive=False, help="Show only this record type, in full."),
+    ] = None,
+    inputs_only: Annotated[
+        bool,
+        typer.Option("--inputs-only", help="Leave out the apex domains the tool added."),
+    ] = False,
+    output_format: Annotated[
+        OutputFormat, typer.Option("--format", help="Output format.")
+    ] = OutputFormat.TABLE,
+) -> None:
+    """Show the DNS records stored for each hostname: CNAME, A, AAAA, MX and TXT.
+
+    Addresses are followed through the CNAME chain, as a resolver answers. Apex domains
+    the tool scanned on its own (where MX and TXT usually live) are included and marked.
+    """
+    try:
+        name = extract_hostname(hostname) if hostname else None
+    except InvalidHostnameError as exc:
+        _fail(UsageError(f"--hostname {hostname!r}: {exc}"))
+    try:
+        with open_store(Settings.from_env(), NEO4J_WAIT_SECONDS, _status) as store:
+            scans = store.scans()
+            rows = load_records(store, hostname=name, include_apex=not inputs_only) if scans else []
+    except DnsInvError as exc:
+        _fail(exc)
+
+    if not scans:
+        _status("The graph is empty: run `dnsinv ingest FILE` first.")
+    elif name and not rows:
+        _fail(UsageError(f"{name} was not scanned (it is not in the stored graph)"))
+
+    if output_format is OutputFormat.JSON:
+        data = {"scans": _scans_json(scans), "hostnames": [_records_json(r) for r in rows]}
+        typer.echo(json.dumps(data, indent=2, ensure_ascii=False))
+        return
+    if not scans:
+        return
+    _print_scan_header(scans)
+    if name:
+        _print_hostname_detail(rows[0])
+    elif record_type:
+        _print_records_of_type(rows, record_type.value)
+    else:
+        _print_records_overview(rows)
+
+
+def _label(row: HostnameRecords) -> str:
+    return f"{row.name} (apex)" if row.is_apex and not row.is_input else row.name
+
+
+def _status_cell(row: HostnameRecords) -> str:
+    lines = [row.status or "-"]
+    if row.failed_lookups:
+        lines.append("failed: " + ", ".join(row.failed_lookups))
+    return "\n".join(lines)
+
+
+def _first_and_count(values: list[str]) -> str:
+    """'first (+N)': one line per cell, so the overview stays one line per hostname."""
+    if not values:
+        return "-"
+    first = shorten(values[0])
+    return f"{first} (+{len(values) - 1})" if len(values) > 1 else first
+
+
+def _print_records_overview(rows: list[HostnameRecords]) -> None:
+    table_rows = []
+    for row in rows:
+        cnames = row.values("CNAME")
+        mail_hosts = [value.split(" ", 1)[-1] for value in row.values("MX")]
+        txt = row.values("TXT")
+        table_rows.append(
+            [
+                _label(row),
+                _status_cell(row),
+                # The end of the chain is what the name really points to.
+                f"→ {shorten(cnames[-1])}" + (f" ({len(cnames)} hops)" if len(cnames) > 1 else "")
+                if cnames
+                else "-",
+                _first_and_count(row.values("A")),
+                _first_and_count(row.values("AAAA")),
+                _first_and_count(mail_hosts),
+                str(len(txt)) if txt else "-",
+            ]
+        )
+    print_table(["HOSTNAME", "STATUS", *RECORD_TYPES], table_rows, keep_whole=(0, 1, 6))
+    typer.echo(
+        f"{len(rows)} hostnames. Every value: dnsinv records --hostname NAME, "
+        "or one type in full: dnsinv records --type TXT"
+    )
+
+
+def _print_records_of_type(rows: list[HostnameRecords], rtype: str) -> None:
+    print_table(
+        ["HOSTNAME", rtype],
+        [[_label(row), cell(row.values(rtype), full=True)] for row in rows],
+    )
+
+
+def _print_hostname_detail(row: HostnameRecords) -> None:
+    kind = "input hostname" if row.is_input else "apex domain added by the tool"
+    typer.echo(f"{row.name} ({kind}), status {row.status}")
+    if len(row.chain) > 1:
+        typer.echo("CNAME chain: " + " → ".join(row.chain))
+    if row.failed_lookups:
+        typer.echo("Failed lookups: " + ", ".join(row.failed_lookups))
+    if not row.records:
+        typer.echo("No records.")
+        return
+    print_table(
+        ["TYPE", "VALUE", "OWNER"],
+        [[r.rtype, r.value, r.owner] for r in row.records],
+        group_by=0,
+    )
+
+
+def _records_json(row: HostnameRecords) -> dict[str, Any]:
+    return {
+        "name": row.name,
+        "is_input": row.is_input,
+        "is_apex": row.is_apex,
+        "status": row.status,
+        "failed_lookups": row.failed_lookups,
+        "cname_chain": row.chain,
+        "records": {rtype: row.values(rtype) for rtype in RECORD_TYPES},
+        "owners": [{"type": r.rtype, "value": r.value, "owner": r.owner} for r in row.records],
+    }
+
+
 # ---- query ------------------------------------------------------------------------
 
 query_app = typer.Typer(help="Investigation queries over the stored graph.", no_args_is_help=True)
@@ -265,18 +420,11 @@ query_app.add_typer(run_app, name="run")
 NEO4J_BROWSER_URL = "http://localhost:7474"
 
 
-class OutputFormat(StrEnum):
-    TABLE = "table"
-    JSON = "json"
-
-
 @query_app.command("list")
 def query_list() -> None:
     """List the available investigation queries."""
-    queries = all_queries()
-    width = max(len(q.name) for q in queries)
-    for query in queries:
-        typer.echo(f"{query.name:<{width}}  {query.summary}")
+    print_table(["QUERY", "WHAT IT ANSWERS"], [[q.name, q.summary] for q in all_queries()])
+    typer.echo("Run one with: dnsinv query run NAME   (options: dnsinv query run NAME --help)")
 
 
 def _query_command(query: Query) -> Callable[..., None]:
@@ -364,61 +512,41 @@ def _print_query_json(
     data = {
         "query": query.name,
         "options": params,
-        "scans": [
-            {
-                "source": scan.source,
-                "scanned_at": scan.scanned_at.isoformat(timespec="seconds"),
-                "resolver": scan.resolver,
-                "hostnames": scan.hostnames,
-            }
-            for scan in scans
-        ],
+        "scans": _scans_json(scans),
         "rows": result.rows,
     }
     typer.echo(json.dumps(data, indent=2, ensure_ascii=False, default=str))
 
 
-def _print_query_table(scans: list[ScanInfo], result: QueryResult) -> None:
+def _print_scan_header(scans: list[ScanInfo]) -> None:
     for scan in scans:
         when = scan.scanned_at.strftime("%Y-%m-%d %H:%M UTC")
         typer.echo(f"Scan of {scan.source} at {when} (resolver {scan.resolver})")
-    typer.echo("")
+
+
+def _scans_json(scans: list[ScanInfo]) -> list[dict[str, Any]]:
+    return [
+        {
+            "source": scan.source,
+            "scanned_at": scan.scanned_at.isoformat(timespec="seconds"),
+            "resolver": scan.resolver,
+            "hostnames": scan.hostnames,
+        }
+        for scan in scans
+    ]
+
+
+def _print_query_table(scans: list[ScanInfo], result: QueryResult) -> None:
+    _print_scan_header(scans)
     if not result.rows:
         typer.echo("No results.")
         return
-
-    cells = [[_cell(row.get(column)) for column in result.columns] for row in result.rows]
-    headers = [column.upper() for column in result.columns]
-    widths = [max(len(h), *(len(r[i]) for r in cells)) for i, h in enumerate(headers)]
-    typer.echo("  ".join(h.ljust(w) for h, w in zip(headers, widths, strict=True)).rstrip())
-    for row in cells:
-        typer.echo("  ".join(c.ljust(w) for c, w in zip(row, widths, strict=True)).rstrip())
+    print_table(
+        [column.upper() for column in result.columns],
+        [[cell(row.get(column)) for column in result.columns] for row in result.rows],
+    )
     count = len(result.rows)
-    typer.echo("")
     typer.echo(f"{count} result{'s' if count != 1 else ''}")
-
-
-MAX_LIST_ITEMS = 3
-MAX_ITEM_LENGTH = 40
-
-
-def _cell(value: Any) -> str:
-    """One table cell. Long values are shortened here only; --format json keeps them whole."""
-    if value is None:
-        return "-"
-    if isinstance(value, bool):
-        return "yes" if value else "no"
-    if isinstance(value, list):
-        shown = ", ".join(_shorten(str(v)) for v in value[:MAX_LIST_ITEMS])
-        hidden = len(value) - MAX_LIST_ITEMS
-        return f"{shown} (+{hidden} more)" if hidden > 0 else shown
-    return _shorten(str(value))
-
-
-def _shorten(text: str) -> str:
-    if len(text) <= MAX_ITEM_LENGTH:
-        return text
-    return text[: MAX_ITEM_LENGTH - 3] + "..."
 
 
 for _query in all_queries():

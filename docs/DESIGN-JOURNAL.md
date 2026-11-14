@@ -187,6 +187,18 @@ Smaller decisions made while building the parser, each covered by a test:
 - **A clean clone found one more problem.** Running the README's commands on a fresh copy worked, but the first command printed `pull access denied for dnsinv` before building: Compose tries Docker Hub first. Harmless, but it looks like an error to someone running the project for the first time. `pull_policy: build` removes it.
 - **No graph screenshot from me.** The browser built into my tools is about 800 pixels wide, too small for readable labels. A screenshot taken in a normal browser is better than a poor one.
 
+## 18. Seeing the records, and tables people can read
+
+**What I noticed when I ran the tool myself.** The assignment is about collecting A, AAAA, MX, TXT and CNAME records, yet no command showed them: `ingest` printed a summary, and the records were only in the `--dry-run` JSON. The tables also had no column separators.
+
+**Decision.** A `records` command, separate from the investigation queries, reads the stored graph: an overview with one line per hostname (first value of each type and how many more), `--hostname` for every record of one name with its owner, and `--type` for one type in full. Tables are drawn by rich, which was already installed with Typer, with dashed separators.
+
+**What the first attempts got wrong.**
+
+- Seven columns of real DNS data do not fit a normal terminal. Letting every cell wrap broke hostnames in the middle; cutting every cell with an ellipsis shrank whole columns to nothing. The overview now shows one line per hostname, and full values are one command away.
+- DNS text is untrusted. Rich reads `[bold]` as styling and `:smile:` as an emoji, so a TXT record could be silently altered on screen. Both are switched off, and a test checks that such a record prints unchanged.
+- My earlier fix for the first-run warning, `pull_policy: build`, made Compose rebuild the image before *every* command. The clean-clone check missed it because I had filtered build lines out of the output. `pull_policy: never` builds once when the image is missing and never asks Docker Hub; after a code change the image is rebuilt with `docker compose build`.
+
 ## Open questions
 
 - **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.

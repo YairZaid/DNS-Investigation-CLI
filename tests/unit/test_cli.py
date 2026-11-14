@@ -13,7 +13,8 @@ from dnsinv.graph.connection import Neo4jUnavailableError
 from dnsinv.graph.store import GraphCounts
 from tests.fakes import NOERROR, UNREACHABLE, FakeRunner, ok
 
-runner = CliRunner()
+# Wide enough that rich never wraps a table cell, whatever terminal the tests run in.
+runner = CliRunner(env={"COLUMNS": "250"})
 
 
 @pytest.fixture

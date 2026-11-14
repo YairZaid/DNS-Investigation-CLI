@@ -23,7 +23,7 @@ services:
       target: runtime
     image: dnsinv:latest
     # Build locally; never try to pull "dnsinv" from Docker Hub (it does not exist there).
-    pull_policy: build
+    pull_policy: never
     depends_on:
       neo4j:
         condition: service_healthy
@@ -57,7 +57,7 @@ services:
       context: .
       target: dev
     image: dnsinv:dev
-    pull_policy: build
+    pull_policy: never
     depends_on:
       neo4j-test:
         condition: service_healthy
