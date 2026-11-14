@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dnsinv"
+version = "0.1.0"
+description = "Collect DNS records for the hostnames in a list of URLs, store them in Neo4j, and investigate the graph."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.15,<1",
+    "neo4j>=5.26,<6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8,<9",
+    "pytest-cov>=5,<7",
+    "ruff>=0.8,<1",
+    "mypy>=1.13,<2",
+]
+
+[project.scripts]
+dnsinv = "dnsinv.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dnsinv"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "RUF", "PT"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+# Test helpers stay unannotated for readability; src/ is fully strict.
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Unit tests run by default. Integration tests need Neo4j, live tests need the internet:
+#   pytest -m "not live"      unit + integration
+#   pytest -m live            real dig against real resolvers
+addopts = "-m 'not integration and not live' --strict-markers"
+markers = [
+    "integration: needs a running Neo4j (NEO4J_URI / NEO4J_USER / NEO4J_PASSWORD)",
+    "live: needs dig and internet access; not run in CI",
+]
+
+[tool.coverage.run]
+source = ["dnsinv"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
