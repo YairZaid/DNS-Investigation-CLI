@@ -11,6 +11,8 @@ requires-python = ">=3.12"
 dependencies = [
     "typer>=0.15,<1",
     "neo4j>=5.26,<6",
+    "tldextract>=5.3,<6",
+    "idna>=3.10,<4",
 ]
 
 [dependency-groups]

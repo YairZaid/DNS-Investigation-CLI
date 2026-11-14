@@ -7,7 +7,7 @@ on:
 jobs:
   checks:
     name: Lint, types, unit + integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       neo4j:
         image: neo4j:5.26-community
@@ -26,8 +26,8 @@ jobs:
       NEO4J_USER: neo4j
       NEO4J_PASSWORD: ci-password
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - name: Install dig
@@ -47,9 +47,9 @@ jobs:
 
   docker:
     name: Docker image and doctor
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: docker compose build cli
       - name: Doctor (starts Neo4j and waits for it)

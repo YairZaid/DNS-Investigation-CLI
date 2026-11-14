@@ -1,0 +1,19 @@
+# A deliberately messy input file: every line exercises one edge case.
+
+https://www.example.com/path?query=1#fragment
+HTTPS://WWW.EXAMPLE.COM
+example.org
+blog.example.co.uk:8443/posts
+http://user:secret@mail.example.net/
+https://bücher.de/
+https://user.github.io/project
+   https://padded.example.com
+https://example.org.
+
+http://192.168.1.1/admin
+http://[2001:db8::1]:8080/
+localhost
+mailto:someone@example.com
+http://exa mple.com
+http://-bad.example.com
+-x

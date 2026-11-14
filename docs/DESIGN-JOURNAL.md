@@ -103,6 +103,18 @@ An independent review raised eight points. I ran `dig 9.20` in the same base ima
 
 **Decision.** uv with `uv.lock`, which pins every dependency, including transitive ones. Docker and CI install with `--frozen`, so a mismatch fails the build instead of silently installing other versions. The interviewer still needs only Docker. `pyproject.toml` stays standard, so `pip install .` also works.
 
+## 11. Reading the input file
+
+Smaller decisions made while building the parser, each covered by a test:
+
+- **Lines are read as bytes**, so one line that is not valid UTF-8 is rejected on its own instead of failing the whole file.
+- **Private public suffixes count as suffixes.** `user.github.io` and `bucket.s3.amazonaws.com` are their own Apex Domains. Otherwise the tool would scan `github.io` and `s3.amazonaws.com` as if the user owned them, and every GitHub Pages site in a file would look like shared infrastructure.
+- **The suffix list never comes from the network.** The snapshot bundled with `tldextract` is used, so results do not depend on a download at runtime.
+- **Underscores are allowed in labels.** They are invalid in strict hostnames but common in real DNS names, and querying them is harmless.
+- **Lines starting with `-`, `+` or `@` are rejected**, even when a valid name could be extracted from them, because `dig` reads such arguments as options or as the server to query.
+- **A numeric last label is rejected** (`999.1.1.1`): it is a malformed IP address, not a hostname.
+- **A `parse` command was added.** It was not in the original plan. It shows how a file is read, which lines were rejected and why, without touching DNS or Neo4j. I built it to verify this stage, and kept it because a user preparing an input file needs the same view.
+
 ---
 
 ## Open questions

@@ -64,6 +64,42 @@ def test_doctor_failure_exits_two(fake_doctor):
     assert "FAIL" in result.output
 
 
+FIXTURE = "tests/fixtures/messy_urls.txt"
+
+
+def test_parse_lists_hostnames_apex_and_rejected_lines():
+    result = runner.invoke(cli.app, ["parse", FIXTURE])
+
+    assert result.exit_code == 0
+    out = result.output
+    assert "www.example.com" in out
+    assert "example.co.uk" in out
+    assert "xn--bcher-kva.de" in out
+    assert "192.168.1.1" in out
+    assert "IP address" in out
+    assert "7 hostnames" in out
+    assert "7 rejected" in out
+    assert "2 duplicates" in out
+
+
+def test_parse_with_only_rejected_lines_exits_one(tmp_path):
+    path = tmp_path / "urls.txt"
+    path.write_text("localhost\n10.0.0.1\n")
+
+    result = runner.invoke(cli.app, ["parse", str(path)])
+
+    assert result.exit_code == 1
+    assert "no valid hostnames" in result.output
+
+
+def test_parse_missing_file_exits_one_with_message(tmp_path):
+    result = runner.invoke(cli.app, ["parse", str(tmp_path / "nope.txt")])
+
+    assert result.exit_code == 1
+    assert "not found" in result.output
+    assert "Traceback" not in result.output
+
+
 def test_doctor_passes_resolver_and_timeout_through(fake_doctor):
     captured = fake_doctor(report(CheckStatus.OK, CheckStatus.OK, CheckStatus.OK))
 
