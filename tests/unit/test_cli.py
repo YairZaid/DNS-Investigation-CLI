@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 from dnsinv import cli
 from dnsinv.collection.runner import CommandNotFoundError, CommandResult
 from dnsinv.doctor import Check, CheckStatus, DoctorReport
+from dnsinv.enrichment.catalog import CatalogError
 from dnsinv.graph.connection import Neo4jUnavailableError
 from dnsinv.graph.store import GraphCounts
 from tests.fakes import NOERROR, UNREACHABLE, FakeRunner, ok
@@ -243,8 +244,9 @@ class FakeStore:
     def ensure_schema(self):
         self.schema_created = True
 
-    def save_scan(self, info, scans, *, replace):
+    def save_scan(self, info, scans, *, replace, enrichment=None):
         self.saved.append((info, list(scans), replace))
+        self.enrichment = enrichment
 
     def counts(self):
         return GraphCounts(nodes={"Hostname": 2, "IP": 3, "Scan": 1}, relationships={"CNAME_TO": 1})
@@ -278,6 +280,22 @@ def test_ingest_stores_the_scan_and_replaces_by_default(tmp_path, fake_dig, fake
     assert [s.name for s in scans] == ["alias.test.lab", "xdangling.test.lab"]
     assert "Stored scan" in result.stdout
     assert "Hostname 2" in result.stdout
+    # Enrichment ran on the same scans and was handed to the store with them.
+    assert fake_store.enrichment is not None
+
+
+def test_ingest_with_a_broken_catalog_stops_before_any_dns(tmp_path, fake_dig, monkeypatch):
+    def broken():
+        raise CatalogError("provider 'X' has category 'magic'")
+
+    monkeypatch.setattr(cli, "load_catalog", broken)
+    path = write_urls(tmp_path, "alias.test.lab")
+
+    result = runner.invoke(cli.app, ["ingest", path, "--dry-run"])
+
+    assert result.exit_code == 2
+    assert "magic" in result.stderr
+    assert fake_dig.calls == []
 
 
 def test_ingest_append_keeps_the_existing_graph(tmp_path, fake_dig, fake_store):

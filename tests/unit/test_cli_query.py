@@ -104,6 +104,29 @@ def test_table_output_starts_with_the_scan_it_describes(graph):
     assert "1 result" in result.stdout
 
 
+def test_long_lists_are_shortened_in_the_table_but_not_in_json(graph):
+    long_row = dict(ROWS[0], hostnames=[f"h{i}.example.com" for i in range(10)])
+    graph(rows=[long_row])
+
+    table = runner.invoke(cli.app, ["query", "run", "shared-infra"]).stdout
+    data = json.loads(
+        runner.invoke(cli.app, ["query", "run", "shared-infra", "--format", "json"]).stdout
+    )
+
+    assert "h0.example.com, h1.example.com, h2.example.com (+7 more)" in table
+    assert "h9.example.com" not in table
+    assert len(data["rows"][0]["hostnames"]) == 10
+
+
+def test_long_text_is_cut_in_the_table(graph):
+    graph(rows=[dict(ROWS[0], asset="x" * 200)])
+
+    table = runner.invoke(cli.app, ["query", "run", "shared-infra"]).stdout
+
+    assert "x" * 200 not in table
+    assert "x" * 37 + "..." in table
+
+
 def test_options_reach_the_query(graph):
     calls = graph()
 

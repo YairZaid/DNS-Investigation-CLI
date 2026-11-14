@@ -7,6 +7,8 @@ Graph model (see docs/PLAN.md section 4):
     (:Hostname)-[:MAIL_HANDLED_BY {priority}]->(:Hostname)
     (:Hostname)-[:HAS_TXT]->(:TxtRecord)
     (:Hostname)-[:SUBDOMAIN_OF]->(:Hostname)       apex domain
+    (:IP|:Hostname)-[:OPERATED_BY]->(:Provider)    infrastructure a provider runs
+    (:Hostname)-[:USES_PROVIDER {evidence, detail}]->(:Provider)   SPF include, TXT token
     (:Scan {source, scanned_at, resolver, hostnames})
 
 Every record hangs off the name that owns it, which with CNAMEs is often not the name
@@ -27,17 +29,19 @@ from neo4j import Driver, ManagedTransaction, Record
 
 from dnsinv.collection.model import HostnameScan, LookupStatus, RecordType
 from dnsinv.config import Settings
+from dnsinv.enrichment.enrich import Enrichment
 from dnsinv.graph.connection import WaitCallback, wait_for_neo4j
 
 _SCHEMA = (
     "CREATE CONSTRAINT hostname_name IF NOT EXISTS FOR (h:Hostname) REQUIRE h.name IS UNIQUE",
     "CREATE CONSTRAINT ip_address IF NOT EXISTS FOR (i:IP) REQUIRE i.address IS UNIQUE",
     "CREATE CONSTRAINT txt_key IF NOT EXISTS FOR (t:TxtRecord) REQUIRE t.key IS UNIQUE",
+    "CREATE CONSTRAINT provider_name IF NOT EXISTS FOR (p:Provider) REQUIRE p.name IS UNIQUE",
 )
 
 # Relationships a scan of a Hostname rewrites. Replaced as a whole on every scan, so a
 # record that disappeared from DNS disappears from the graph too.
-_SCANNED_RELATIONSHIPS = "RESOLVES_TO|CNAME_TO|MAIL_HANDLED_BY|HAS_TXT|SUBDOMAIN_OF"
+_SCANNED_RELATIONSHIPS = "RESOLVES_TO|CNAME_TO|MAIL_HANDLED_BY|HAS_TXT|SUBDOMAIN_OF|USES_PROVIDER"
 
 _WRITE_HOSTNAME = f"""
 MERGE (h:Hostname {{name: $name}})
@@ -107,14 +111,59 @@ SET apex.is_apex = true
 MERGE (h)-[:SUBDOMAIN_OF]->(apex)
 """
 
-# Nodes nothing points to any more. Input Hostnames and Apex Domains stay even with no
-# records: "this name has nothing" is a result.
+_WRITE_PROVIDERS = """
+UNWIND $providers AS prov
+MERGE (p:Provider {name: prov.name})
+SET p.category = prov.category, p.shared_platform = prov.shared_platform
+"""
+
+_WRITE_OPERATED_IPS = """
+UNWIND $assets AS asset
+MATCH (ip:IP {address: asset.asset})
+MATCH (p:Provider {name: asset.provider})
+MERGE (ip)-[:OPERATED_BY]->(p)
+"""
+
+_WRITE_OPERATED_NAMES = """
+UNWIND $assets AS asset
+MATCH (h:Hostname {name: asset.asset})
+MATCH (p:Provider {name: asset.provider})
+MERGE (h)-[:OPERATED_BY]->(p)
+"""
+
+_WRITE_CLAIMS = """
+UNWIND $claims AS claim
+MATCH (h:Hostname {name: claim.owner})
+MATCH (p:Provider {name: claim.provider})
+MERGE (h)-[u:USES_PROVIDER {evidence: claim.evidence, detail: claim.detail}]->(p)
+"""
+
+_WRITE_TXT_KINDS = """
+UNWIND $kinds AS k
+MATCH (t:TxtRecord {key: k.key})
+SET t.kind = k.kind
+"""
+
+# Input Hostnames and Apex Domains are the roots of the graph; they stay even with no
+# records, because "this name has nothing" is a result. Every other node must be reachable
+# from a root. A CloudFront name that no CNAME points to any more is gone, together with
+# the addresses only it led to, even though it still has records of its own.
 _DELETE_ORPHANS = """
 MATCH (n)
-WHERE (n:IP OR n:TxtRecord
-       OR (n:Hostname AND NOT coalesce(n.is_input, false) AND NOT coalesce(n.is_apex, false)))
-  AND NOT (n)--()
-DELETE n
+WHERE (n:IP OR n:TxtRecord OR n:Hostname)
+  AND NOT (n:Hostname AND (coalesce(n.is_input, false) OR coalesce(n.is_apex, false)))
+  AND NOT EXISTS {
+    MATCH (root:Hostname)
+          -[:CNAME_TO|MAIL_HANDLED_BY|RESOLVES_TO|HAS_TXT|SUBDOMAIN_OF*1..12]->(n)
+    WHERE root.is_input OR root.is_apex
+  }
+DETACH DELETE n
+"""
+
+_DELETE_UNUSED_PROVIDERS = """
+MATCH (p:Provider)
+WHERE NOT (p)--()
+DELETE p
 """
 
 
@@ -143,15 +192,24 @@ class GraphStore:
     def clear(self) -> None:
         self._driver.execute_query("MATCH (n) DETACH DELETE n")
 
-    def save_scan(self, info: ScanInfo, scans: Sequence[HostnameScan], *, replace: bool) -> None:
+    def save_scan(
+        self,
+        info: ScanInfo,
+        scans: Sequence[HostnameScan],
+        *,
+        replace: bool,
+        enrichment: Enrichment | None = None,
+    ) -> None:
         """Store a Scan. `replace` (the default for ingest) first empties the graph."""
         if replace:
             self.clear()
         with self._driver.session() as session:
             for scan in scans:
                 session.execute_write(_write_hostname, scan, info.scanned_at)
+            if enrichment is not None:
+                session.execute_write(_write_enrichment, enrichment)
             session.execute_write(_write_scan_node, info)
-            session.execute_write(lambda tx: tx.run(_DELETE_ORPHANS).consume())
+            session.execute_write(_delete_orphans)
 
     def scans(self) -> list[ScanInfo]:
         records, _, _ = self._driver.execute_query(
@@ -239,6 +297,34 @@ def _write_hostname(tx: ManagedTransaction, scan: HostnameScan, scanned_at: date
     )
     if target.apex and target.apex != scan.name:
         tx.run(_WRITE_APEX, name=scan.name, apex=target.apex).consume()
+
+
+def _write_enrichment(tx: ManagedTransaction, enrichment: Enrichment) -> None:
+    _run_if(
+        tx,
+        _WRITE_PROVIDERS,
+        providers=[
+            {"name": p.name, "category": p.category, "shared_platform": p.shared_platform}
+            for p in enrichment.providers
+        ],
+    )
+    operated = enrichment.operated
+    _run_if(tx, _WRITE_OPERATED_IPS, assets=[vars(a) for a in operated if a.kind == "ip"])
+    _run_if(tx, _WRITE_OPERATED_NAMES, assets=[vars(a) for a in operated if a.kind == "hostname"])
+    _run_if(tx, _WRITE_CLAIMS, claims=[vars(c) for c in enrichment.claims])
+    _run_if(
+        tx,
+        _WRITE_TXT_KINDS,
+        kinds=[
+            {"key": _txt_key(owner, value), "kind": kind.value}
+            for (owner, value), kind in enrichment.txt_kinds.items()
+        ],
+    )
+
+
+def _delete_orphans(tx: ManagedTransaction) -> None:
+    tx.run(_DELETE_ORPHANS).consume()
+    tx.run(_DELETE_UNUSED_PROVIDERS).consume()
 
 
 def _write_scan_node(tx: ManagedTransaction, info: ScanInfo) -> None:

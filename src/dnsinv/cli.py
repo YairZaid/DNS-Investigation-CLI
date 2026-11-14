@@ -23,6 +23,8 @@ from dnsinv.collection.runner import run_subprocess
 from dnsinv.collection.scanner import DEFAULT_WORKERS, plan_targets, scan_all
 from dnsinv.config import Settings
 from dnsinv.doctor import CheckStatus, run_doctor
+from dnsinv.enrichment.catalog import load_catalog
+from dnsinv.enrichment.enrich import enrich
 from dnsinv.errors import EXIT_ENVIRONMENT, EXIT_USAGE, DnsInvError, UsageError
 from dnsinv.graph.connection import check_neo4j
 from dnsinv.graph.store import GraphCounts, ScanInfo, open_store
@@ -102,6 +104,7 @@ def ingest(
         parsed = read_input_file(file)
         if not parsed.hostnames:
             raise UsageError(f"{file} has no valid hostnames (run `dnsinv parse {file}`)")
+        catalog = load_catalog()  # a broken catalog fails here, before any DNS
         with ExitStack() as stack:
             # Connect before scanning: fail in seconds, not after the whole scan.
             store = (
@@ -142,8 +145,9 @@ def ingest(
                 resolver=choice.describe(),
                 hostnames=len(scans),
             )
+            enrichment = enrich(scans, catalog)
             store.ensure_schema()
-            store.save_scan(info, scans, replace=not append)
+            store.save_scan(info, scans, replace=not append, enrichment=enrichment)
             counts = store.counts()
     except DnsInvError as exc:
         _fail(exc)
@@ -394,14 +398,27 @@ def _print_query_table(scans: list[ScanInfo], result: QueryResult) -> None:
     typer.echo(f"{count} result{'s' if count != 1 else ''}")
 
 
+MAX_LIST_ITEMS = 3
+MAX_ITEM_LENGTH = 40
+
+
 def _cell(value: Any) -> str:
+    """One table cell. Long values are shortened here only; --format json keeps them whole."""
     if value is None:
         return "-"
-    if isinstance(value, list):
-        return ", ".join(str(v) for v in value)
     if isinstance(value, bool):
         return "yes" if value else "no"
-    return str(value)
+    if isinstance(value, list):
+        shown = ", ".join(_shorten(str(v)) for v in value[:MAX_LIST_ITEMS])
+        hidden = len(value) - MAX_LIST_ITEMS
+        return f"{shown} (+{hidden} more)" if hidden > 0 else shown
+    return _shorten(str(value))
+
+
+def _shorten(text: str) -> str:
+    if len(text) <= MAX_ITEM_LENGTH:
+        return text
+    return text[: MAX_ITEM_LENGTH - 3] + "..."
 
 
 for _query in all_queries():

@@ -39,7 +39,9 @@ QUERY = Query(
         "resolves to (also at the end of its CNAME chain), on every name in its CNAME chain, "
         "and on the mail servers of its apex domain. Sharing inside one organisation "
         "(www.example.com and shop.example.com) is included unless --cross-apex is given. "
-        "Note that a shared CDN or cloud address does not prove the domains are related."
+        "PLATFORM names the provider behind an asset when the catalog knows it; "
+        "SHARED_PLATFORM marks CDNs and clouds where unrelated customers share addresses, "
+        "so sharing such an asset does not prove the domains are related."
     ),
     body=_BODY,
     table_return="""
@@ -48,14 +50,26 @@ RETURN kind,
        size(hosts) AS hostname_count,
        size(apexes) AS apex_count,
        [x IN hosts | x.name] AS hostnames,
-       apexes AS apex_domains
+       apexes AS apex_domains,
+       [(asset)-[:OPERATED_BY]->(p:Provider) | p.name] AS platform,
+       any(q IN [(asset)-[:OPERATED_BY]->(p:Provider) | p] WHERE q.shared_platform)
+         AS shared_platform
 ORDER BY hostname_count DESC, apex_count DESC, kind, asset
 """,
     graph_return="""
 UNWIND paths AS path
 RETURN path
 """,
-    columns=("kind", "asset", "hostname_count", "apex_count", "hostnames", "apex_domains"),
+    columns=(
+        "kind",
+        "asset",
+        "hostname_count",
+        "apex_count",
+        "hostnames",
+        "apex_domains",
+        "platform",
+        "shared_platform",
+    ),
     options=(
         Option(
             "min_shared",

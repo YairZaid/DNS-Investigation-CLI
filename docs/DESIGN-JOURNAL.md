@@ -163,6 +163,22 @@ Smaller decisions made while building the parser, each covered by a test:
 
 **Found while checking the link.** The first graph in the browser showed `example.com` and `www.example.com` as different organisations, although `--cross-apex` should have hidden them. Neo4j warned that the `apex` property did not exist: the data had been stored by the previous stage, before that property was added. A fresh `ingest` fixed it. Because `ingest` replaces the graph, an upgrade only needs one re-run, but a graph stored by an older version is not migrated.
 
+## 16. Providers: two kinds of evidence
+
+- **Infrastructure and claims are different facts.** An address in Cloudflare's published ranges, a CNAME into `cloudfront.net` or an MX at `mail.protection.outlook.com` is infrastructure a provider *runs*, and several domains can share it: `(:IP|:Hostname)-[:OPERATED_BY]->(:Provider)`. An SPF include or a verification token is the domain's own *statement* that it uses a provider: `(:Hostname)-[:USES_PROVIDER {evidence, detail}]->(:Provider)`. Keeping them apart lets `shared-infra` name the platform behind a shared asset, and lets `providers` say where each piece of evidence was found.
+- **The catalog is data.** `providers.yaml` lists about 35 providers with their CNAME suffixes, MX suffixes, SPF includes, TXT token patterns and published address ranges. It is validated on load: a typo in a category, an invalid regular expression or address range stops the tool with a message naming the entry, before any DNS is queried. I only included patterns I am confident of; a provider missing from the list is simply not reported.
+- **Suffixes match on label boundaries.** `evilcloudfront.net` is not `cloudfront.net`. Without this rule, anyone could register a look-alike domain and be reported as a CDN.
+- **The scanned name itself is never "operated" by a CNAME provider.** Scanning `octocat.github.io` asks about that site; only names reached through a CNAME are attributed to the provider.
+
+**Found by a test: "orphan" was the wrong rule.** In append mode, when a CNAME to CloudFront disappeared, the CloudFront name stayed in the graph: it still had address records of its own, so it was not an orphan by the old definition (no relationships). The correct rule is reachability: input hostnames and apex domains are the roots, and every other node must be reachable from one of them. Nodes that are not, and the addresses only they led to, are removed.
+
+**Two smaller lessons from this stage.**
+
+- CI failed on a test that passed locally: on GitHub Actions, Typer forces coloured output, and the colour codes split `--min-shared` in the help text. I reproduced it locally by setting the same environment variable, and the test now strips colour codes. The full suite is now also run locally with `GITHUB_ACTIONS=1`.
+- A new dependency's type stubs had been released the day before. I pinned an older release: there was no specific risk, but a package that is a day old is where supply-chain attacks start.
+
+**The first live run** reported 13 providers for `github.com` from DNS alone, among them Salesforce, Zendesk, Stripe and Atlassian. All of it is public information, and it shows how much an organisation's supplier list leaks through DNS. The evidence column also showed that long values make a terminal table unreadable, so tables now shorten long values and lists; `--format json` keeps them whole.
+
 ## Open questions
 
 - **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.

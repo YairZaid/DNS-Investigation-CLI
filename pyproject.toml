@@ -13,6 +13,7 @@ dependencies = [
     "neo4j>=5.26,<6",
     "tldextract>=5.3,<6",
     "idna>=3.10,<4",
+    "pyyaml>=6.0,<7",
 ]
 
 [dependency-groups]
@@ -21,6 +22,7 @@ dev = [
     "pytest-cov>=5,<7",
     "ruff>=0.8,<1",
     "mypy>=1.13,<2",
+    "types-pyyaml>=6.0.12.20250915,<6.0.12.20261101",
 ]
 
 [project.scripts]

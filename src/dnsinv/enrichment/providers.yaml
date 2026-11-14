@@ -1,0 +1,272 @@
+# Third-party providers recognisable from DNS records.
+#
+# Each provider lists the evidence that identifies it:
+#   cname        suffixes of a name in a CNAME chain       (www.x.com -> x.cloudfront.net)
+#   cname_regex  the same, when a suffix list cannot express it (S3 has region variants)
+#   mx           suffixes of a mail exchange                (MX 0 x.mail.protection.outlook.com)
+#   spf          suffixes of an SPF include: or redirect=   (include:_spf.google.com)
+#   txt          regular expressions on a TXT value        (google-site-verification=...)
+#   ip           address ranges the provider publishes     (104.16.0.0/13)
+#
+# shared_platform: many unrelated customers sit on the same addresses or names, so sharing
+#   one of them is not evidence that two domains are related.
+# takeover: how an unclaimed resource at this provider shows itself (see docs/adr/0003).
+#   signal nxdomain - the CNAME target stops existing in DNS
+#   signal http     - DNS still resolves; only the HTTP response contains `marker`
+#
+# This list is deliberately small and partial. A provider missing here is simply not reported.
+
+providers:
+  # ---- CDNs and cloud platforms --------------------------------------------------------
+  - name: Cloudflare
+    category: cdn
+    shared_platform: true
+    patterns:
+      cname: [cdn.cloudflare.net]
+      # Published at https://www.cloudflare.com/ips/
+      ip:
+        - 173.245.48.0/20
+        - 103.21.244.0/22
+        - 103.22.200.0/22
+        - 103.31.4.0/22
+        - 141.101.64.0/18
+        - 108.162.192.0/18
+        - 190.93.240.0/20
+        - 188.114.96.0/20
+        - 197.234.240.0/22
+        - 198.41.128.0/17
+        - 162.158.0.0/15
+        - 104.16.0.0/13
+        - 104.24.0.0/14
+        - 172.64.0.0/13
+        - 131.0.72.0/22
+        - 2400:cb00::/32
+        - 2606:4700::/32
+        - 2803:f800::/32
+        - 2405:b500::/32
+        - 2405:8100::/32
+        - 2a06:98c0::/29
+        - 2c0f:f248::/32
+
+  - name: Akamai
+    category: cdn
+    shared_platform: true
+    patterns:
+      cname: [akamaiedge.net, akamai.net, akamaized.net, edgekey.net, edgesuite.net]
+
+  - name: Fastly
+    category: cdn
+    shared_platform: true
+    patterns:
+      cname: [fastly.net, fastlylb.net]
+      ip: [151.101.0.0/16]
+
+  - name: Amazon CloudFront
+    category: cdn
+    shared_platform: true
+    patterns:
+      cname: [cloudfront.net]
+
+  - name: Amazon S3
+    category: cloud
+    shared_platform: true
+    patterns:
+      # bucket.s3.amazonaws.com, bucket.s3.us-east-2.amazonaws.com,
+      # bucket.s3-website-us-east-1.amazonaws.com, bucket.s3-website.eu-west-1.amazonaws.com
+      cname_regex: ['(^|\.)s3([.-][a-z0-9-]+)*\.amazonaws\.com$']
+    takeover:
+      signal: http
+      marker: NoSuchBucket
+
+  - name: AWS Elastic Load Balancing
+    category: cloud
+    shared_platform: true
+    patterns:
+      cname: [elb.amazonaws.com]
+
+  - name: AWS Elastic Beanstalk
+    category: hosting
+    shared_platform: true
+    patterns:
+      cname: [elasticbeanstalk.com]
+    takeover:
+      signal: nxdomain
+
+  - name: Microsoft Azure
+    category: cloud
+    shared_platform: true
+    patterns:
+      cname:
+        - azurewebsites.net
+        - cloudapp.net
+        - cloudapp.azure.com
+        - trafficmanager.net
+        - azureedge.net
+        - azurefd.net
+    takeover:
+      signal: nxdomain
+
+  - name: Google Cloud
+    category: cloud
+    shared_platform: true
+    patterns:
+      cname: [googlehosted.com, appspot.com]
+
+  # ---- Hosting -------------------------------------------------------------------------
+  - name: GitHub Pages
+    category: hosting
+    shared_platform: true
+    patterns:
+      cname: [github.io]
+      ip: [185.199.108.0/22]
+    takeover:
+      signal: http
+      marker: "There isn't a GitHub Pages site here"
+
+  - name: Heroku
+    category: hosting
+    shared_platform: true
+    patterns:
+      cname: [herokuapp.com, herokudns.com, herokussl.com]
+    takeover:
+      signal: http
+      marker: "No such app"
+
+  - name: Netlify
+    category: hosting
+    shared_platform: true
+    patterns:
+      cname: [netlify.app, netlify.com]
+
+  - name: Vercel
+    category: hosting
+    shared_platform: true
+    patterns:
+      cname: [vercel-dns.com, vercel.app]
+
+  - name: Shopify
+    category: hosting
+    shared_platform: true
+    patterns:
+      cname: [myshopify.com]
+
+  # ---- Email ---------------------------------------------------------------------------
+  - name: Microsoft 365
+    category: email
+    patterns:
+      mx: [mail.protection.outlook.com]
+      spf: [spf.protection.outlook.com]
+      txt: ['^MS=ms\d+$']
+
+  - name: Google Workspace
+    category: email
+    patterns:
+      mx: [google.com, googlemail.com]
+      spf: [_spf.google.com]
+
+  - name: Proofpoint
+    category: email
+    patterns:
+      mx: [pphosted.com]
+      spf: [pphosted.com]
+
+  - name: Mimecast
+    category: email
+    patterns:
+      mx: [mimecast.com]
+      spf: [mimecast.com]
+
+  - name: Amazon SES
+    category: email
+    patterns:
+      spf: [amazonses.com]
+      txt: ['^amazonses:']
+
+  - name: SendGrid
+    category: email
+    patterns:
+      spf: [sendgrid.net]
+      cname: [sendgrid.net]
+
+  - name: Mailgun
+    category: email
+    patterns:
+      spf: [mailgun.org]
+      mx: [mailgun.org]
+
+  - name: Mailchimp
+    category: email
+    patterns:
+      spf: [servers.mcsv.net]
+
+  # ---- SaaS (mostly from domain verification tokens) -------------------------------------
+  - name: Google Search Console
+    category: saas
+    patterns:
+      txt: ['^google-site-verification=']
+
+  - name: Salesforce
+    category: saas
+    patterns:
+      spf: [_spf.salesforce.com]
+
+  - name: Zendesk
+    category: saas
+    patterns:
+      cname: [zendesk.com]
+      spf: [mail.zendesk.com]
+
+  - name: Atlassian
+    category: saas
+    patterns:
+      txt: ['^atlassian-domain-verification=']
+
+  - name: Meta
+    category: saas
+    patterns:
+      txt: ['^facebook-domain-verification=']
+
+  - name: Apple
+    category: saas
+    patterns:
+      txt: ['^apple-domain-verification=']
+
+  - name: DocuSign
+    category: saas
+    patterns:
+      txt: ['^docusign=']
+
+  - name: Adobe
+    category: saas
+    patterns:
+      txt: ['^adobe-idp-site-verification=']
+
+  - name: Stripe
+    category: saas
+    patterns:
+      txt: ['^stripe-verification=']
+
+  - name: Dropbox
+    category: saas
+    patterns:
+      txt: ['^dropbox-domain-verification=']
+
+  - name: Zoom
+    category: saas
+    patterns:
+      txt: ['^ZOOM_verify_']
+
+  - name: Cisco Webex
+    category: saas
+    patterns:
+      txt: ['^cisco-ci-domain-verification=', '^webexdomainverification']
+
+  - name: OpenAI
+    category: saas
+    patterns:
+      txt: ['^openai-domain-verification=']
+
+  - name: GlobalSign
+    category: saas
+    patterns:
+      txt: ['^globalsign-']
