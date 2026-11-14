@@ -1,0 +1,40 @@
+# Example input for dnsinv: one URL per line.
+# Well-known public sites, chosen to show shared hosting, CDNs and mail providers.
+# Lines below the "messy input" marker show how the parser handles real-world mistakes.
+
+# Python ecosystem
+https://www.python.org/
+https://docs.python.org/3/
+https://pypi.org/project/requests/
+https://peps.python.org
+
+# GitHub
+https://github.com/YairZaid/DNS-Investigation-CLI
+https://docs.github.com/en
+https://gist.github.com
+
+# Microsoft
+https://www.microsoft.com/en-us/
+https://learn.microsoft.com
+
+# Mozilla
+https://www.mozilla.org/
+https://developer.mozilla.org/en-US/
+
+# Other developer sites
+https://nodejs.org/en
+https://www.rust-lang.org
+https://go.dev/doc/
+https://kubernetes.io/docs/
+https://www.djangoproject.com/
+https://www.docker.com/
+https://docs.docker.com/
+https://www.npmjs.com/
+
+# ---- messy input -----------------------------------------------------------------
+HTTPS://WWW.PYTHON.ORG/about/
+docs.python.org/3/library/
+https://example.com:8443/path?q=1#top
+http://192.0.2.10/admin
+localhost
+mailto:security@example.com

@@ -26,8 +26,9 @@ def test_every_provider_has_at_least_one_pattern(catalog):
 
 
 def test_cdn_and_cloud_platforms_are_marked_as_shared(catalog):
-    for name in ("Cloudflare", "Akamai", "Fastly", "Amazon CloudFront"):
+    for name in ("Cloudflare", "Akamai", "Fastly", "Amazon CloudFront", "Google Workspace"):
         assert catalog.get(name).shared_platform, name
+    # Microsoft 365 gives every tenant its own MX name, so sharing one is meaningful.
     assert not catalog.get("Microsoft 365").shared_platform
 
 
@@ -129,15 +130,25 @@ def test_txt_without_a_known_token(catalog):
         ("172.66.147.243", "Cloudflare"),
         ("2606:4700:10::6814:179a", "Cloudflare"),
         ("151.101.0.223", "Fastly"),
+        ("2a04:4e42:200::223", "Fastly"),
         ("185.199.108.153", "GitHub Pages"),
+        ("2606:50c0:8000::153", "GitHub Pages"),
     ],
 )
 def test_addresses(catalog, address, provider):
     assert [p.name for p in catalog.match_ip(address)] == [provider]
 
 
-def test_address_outside_every_range(catalog):
-    assert catalog.match_ip("192.0.2.1") == []
+@pytest.mark.parametrize(
+    "address",
+    [
+        "192.0.2.1",
+        # raw.githubusercontent.com: next to GitHub Pages, but not GitHub Pages.
+        "185.199.108.133",
+    ],
+)
+def test_address_outside_every_range(catalog, address):
+    assert catalog.match_ip(address) == []
 
 
 # ---- validation -----------------------------------------------------------------------
