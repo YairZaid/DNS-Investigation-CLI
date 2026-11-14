@@ -1,0 +1,110 @@
+# Design journal
+
+The questions I worked through while planning and building this tool: what I was unsure about, the options I weighed, what I checked before deciding, and what I changed my mind about. Final decisions are recorded as ADRs in [`docs/adr/`](adr/); this file is the reasoning that led to them. Terms are defined in [`CONTEXT.md`](../CONTEXT.md).
+
+## How I worked
+
+- **Plan before code.** I wrote a full plan covering architecture, graph model, edge cases, tests, assumptions and limitations, and only started coding after reviewing it.
+- **Outside review.** I had the plan reviewed independently twice and talked it through with a software engineer. Every point raised is below, including the ones I rejected and why.
+- **Claims tested before they were accepted.** When a review made a technical claim, I ran an experiment in a container before changing the plan. Some claims held up, one did not.
+- **One stage at a time.** Each stage ends with lint (ruff), type checks (mypy), tests and a stage-specific command whose real output I read before moving on.
+- **AI pair programmer.** I used an AI coding assistant to write code and run experiments. Decisions, scope and every review step were mine.
+
+---
+
+## 1. Where must this run?
+
+**Question.** The tool has to work on the interviewer's machine, not only on mine. I develop on Windows, where `dig` does not exist, and I cannot know the interviewer's OS or what is installed.
+
+**Options.** Install instructions per OS; a pure-Python DNS library instead of `dig`; Docker.
+
+**Decision.** Docker Compose runs both Neo4j and the CLI, with `dig` inside the image. The only requirement is Docker. The assignment requires `dig`, so a DNS library was ruled out ([ADR 0001](adr/0001-shell-out-to-dig.md)).
+
+## 2. Which names get scanned?
+
+**Question.** The assignment says to collect records for "their hostnames". But MX and TXT (SPF, verification tokens) live on the registrable domain: `blog.example.com` almost never has them, `example.com` does.
+
+**Options.** Literal reading (hostname only); hostname plus its apex domain; apex behind a flag.
+
+**Decision.** Scan both and link them with `SUBDOMAIN_OF`. The apex comes from the Public Suffix List, so `example.co.il` is handled correctly. `--no-apex` gives the literal reading ([ADR 0004](adr/0004-scan-apex-domain.md)).
+
+## 3. How deep should takeover detection go?
+
+**Question.** With DNS alone you can see a CNAME whose target returns NXDOMAIN. But for S3, GitHub Pages and Heroku the DNS keeps resolving after the resource is deleted; only the HTTP response (`NoSuchBucket`) shows it is gone.
+
+**Options.** DNS only; always verify over HTTP; DNS by default with opt-in HTTP verification.
+
+**Decision.** DNS by default, `--verify-http` opt-in. Always verifying would send requests to third-party servers the user never asked to contact. DNS only cannot say anything useful about S3 ([ADR 0003](adr/0003-passive-takeover-detection.md)).
+
+## 4. The interviewer changed the takeover requirement
+
+**What happened.** After the assignment, the interviewer wrote that instead of building the takeover query I should learn what subdomain takeover is and how it happens, especially with S3 buckets.
+
+**What I weighed.** Implementing the query is not hard: the CNAME chain and lookup statuses are collected anyway for the shared-infrastructure query. The risk is the quality of the results: without HTTP verification S3 produces noise, there is no real vulnerable domain I am allowed to test against, and a query that returns a wrong result in a demo hurts more than a missing one.
+
+**Decision.** The required deliverable is an explanation chapter in the README on how takeover happens and why S3 is the hard case. The query and HTTP verification are optional stages after the submission point, built only if time remains.
+
+## 5. Which additional query?
+
+**Options.** Mail security (MX without SPF, permissive SPF); third-party providers; infrastructure concentration; other dangling records.
+
+**Decision.** Third-party providers: which external services each domain depends on, from TXT verification tokens, SPF includes, MX hosts and CNAME targets. It maps the organisation's supply chain and reuses the provider catalogue that takeover detection also needs.
+
+## 6. What happens when I scan again?
+
+**First decision.** Keep only the latest state, no history: history adds a time dimension to every node and query, beyond the assignment's scope.
+
+**Challenged by** a software engineer I consulted: DNS changes from day to day. Should the database persist at all, or be flushed when containers stop?
+
+**What I found.** Re-scanning a domain already replaced its old records, so changed DNS was handled. The real problem was different: domains from an earlier file stayed in the graph, so a query after scanning `list2.txt` could mix in `list1.txt` from another day. Flushing on shutdown would not help either: `ingest` and `query` are separate commands that must share data, and a Docker restart would silently empty the graph.
+
+**Decision.** Keep the volume. Each `ingest` replaces the whole graph by default; `--append` builds one graph from several files. The graph records which file was scanned and when, and queries show it ([ADR 0002](adr/0002-latest-state-graph.md)).
+
+## 7. First review: what held up when tested
+
+An independent review raised eight points. I ran `dig 9.20` in the same base image the tool uses before accepting any of them.
+
+| Claim | Verdict | Evidence |
+|---|---|---|
+| Five `dig` processes per name will choke the CPU | Fix adopted, warning overstated | One process for all five types took 28 ms against 118 ms for five. A process spawn costs about 7 ms, so 5,000 spawns is tens of seconds, not "long minutes". |
+| Use fixed `dig` flags, not the default human output | Adopted, with a correction | `+noall +comments +answer` works. `+yaml` also works, but not with the older `dig` on macOS, which would break running without Docker. |
+| CNAME targets outside the input file have no status | Valid, different fix | One A query already returns the whole chain. Every link becomes a node with its own status; no extra lookups needed. |
+| SPF handling is split between two modules | Valid | Collection keeps raw TXT; enrichment classifies SPF. |
+| `docker compose up -d` returns before Neo4j is ready, so the CLI races it | **Rejected** | Tested with a service that takes 15 s to become healthy: `docker compose run` waited 18 s before starting. `depends_on: service_healthy` already prevents the race. |
+| Delete only outgoing relationships, then clean orphan nodes | Valid | Added to the graph model. |
+| Fixed structure for the provider catalogue | Adopted | Includes a `shared_platform` flag so a shared CDN IP is not reported as a real link between domains. |
+| Progress bar | Adopted | Written to stderr so JSON output stays clean. |
+
+**Found by the experiments, missed by the review:**
+
+1. In a batched `dig` call each answer block has no question, so an empty AAAA block looks identical to an empty CNAME block. Adding `+question` labels every block.
+2. A timeout inside a batched call prints a line with no name or type. Any question with no answer block is now marked `TIMEOUT`.
+3. Docker Desktop's resolver returned every record twice. Records are deduplicated.
+
+## 8. Which DNS resolver?
+
+**Question.** Results depend on the resolver. Some ISPs answer NXDOMAIN with an ad page, which would hide exactly the dangling records the takeover analysis looks for. Results should also be reproducible on the interviewer's machine.
+
+**Decision.** Default to `1.1.1.1`. A second review added an important detail: check reachability **once** at the start of the run, not per domain. Otherwise, on a network that blocks outbound DNS, every lookup waits for a timeout twice. If `1.1.1.1` is unreachable the tool falls back to the system resolver and says so. A resolver given explicitly with `--resolver` is never silently replaced: if it does not answer, the tool stops with an error.
+
+## 9. Two days: what to cut
+
+**Constraint.** Two full working days.
+
+**What I expected to take the time.** Not writing code. Reading and understanding each stage well enough to defend it; real-world DNS surprises (several already appeared in the experiments above); and the README findings.
+
+**Decision.** A submission point after the core stages: tool, shared infrastructure, providers, README. Takeover and HTTP verification come after it. Test coverage is measured and reported, but does not fail CI.
+
+## 10. pip or uv?
+
+**Question.** The same engineer pointed out that uv has largely replaced pip for Python projects.
+
+**What it exposed.** The plan said "pinned versions", but `pyproject.toml` only had ranges such as `typer>=0.15,<1`. An image built next month could have installed different versions from mine.
+
+**Decision.** uv with `uv.lock`, which pins every dependency, including transitive ones. Docker and CI install with `--frozen`, so a mismatch fails the build instead of silently installing other versions. The interviewer still needs only Docker. `pyproject.toml` stays standard, so `pip install .` also works.
+
+---
+
+## Open questions
+
+- **Dangling CNAME output.** The exact `dig` output for a CNAME whose target is NXDOMAIN follows from the DNS standard but has not been observed against a real case yet. To be checked in the collection stage, before any query relies on it.

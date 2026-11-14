@@ -20,6 +20,8 @@ The first run builds the image and starts Neo4j; the command waits until Neo4j i
 
 ## Development
 
+Dependencies are managed with [uv](https://docs.astral.sh/uv/) and pinned in `uv.lock`, so every build installs exactly the same versions. Inside Docker uv is already installed; you only need it on the host for an IDE virtualenv (`uv sync`).
+
 ```bash
 docker compose --profile dev run --rm test
 ```
