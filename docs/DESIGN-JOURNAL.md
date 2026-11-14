@@ -153,6 +153,16 @@ Smaller decisions made while building the parser, each covered by a test:
 
 **Checked: the same file twice.** The first real double ingest did not give identical counts: 23 addresses, then 25. The store tests already showed that identical input gives an identical graph, so I scanned the same file three times and compared every name. All were stable except one Akamai CDN name, which returned a different set of IPv6 addresses on every query. The graph was right; the internet changed. Two consequences: re-running a scan is not guaranteed to reproduce the README's numbers exactly, and shared-infrastructure results for CDN-hosted names are a sample of what the CDN hands out, not the full set.
 
+## 15. The query framework and shared-infra
+
+- **A query is data, not code.** Each query is one file with a Cypher body, a table ending and a graph ending, plus its options. The CLI builds a subcommand with its own `--help` and flags from that definition, so adding a query touches no CLI code.
+- **What "depends on" means.** An input hostname depends on the addresses it resolves to (also at the end of its CNAME chain), on every name in its chain, and on the mail servers of its apex domain. Apex domains the tool added are not subjects themselves: they are scanned only to read MX and TXT on behalf of the input.
+- **Sharing inside one organisation is shown by default.** `www.example.com` and `shop.example.com` on one address is real shared infrastructure, if an obvious one. `--cross-apex` keeps only sharing between different apex domains, which is usually the interesting finding.
+- **The table and the picture cannot disagree.** An integration test runs both endings on a known graph and checks that they return the same (asset, hostname) pairs.
+- **`--cypher` prints a link, not only a query.** I checked in a browser that Neo4j Browser 5.26 opens `/browser/?cmd=edit&arg=...` with the query already in its editor. After signing in, the user presses Run. A test checks that the link decodes to exactly the printed query.
+
+**Found while checking the link.** The first graph in the browser showed `example.com` and `www.example.com` as different organisations, although `--cross-apex` should have hidden them. Neo4j warned that the `apex` property did not exist: the data had been stored by the previous stage, before that property was added. A fresh `ingest` fixed it. Because `ingest` replaces the graph, an upgrade only needs one re-run, but a graph stored by an older version is not migrated.
+
 ## Open questions
 
 - **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.

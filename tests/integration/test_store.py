@@ -194,6 +194,10 @@ def test_subdomain_is_linked_to_its_apex(store):
         "is_apex": True,
         "apex_is_input": False,
     }
+    # The apex is also a property, so queries can group hostnames by organisation.
+    assert single(store, "MATCH (h:Hostname {name: 'ok.test.lab'}) RETURN h.apex AS apex") == {
+        "apex": "test.lab"
+    }
 
 
 def test_failed_lookups_are_listed(store):

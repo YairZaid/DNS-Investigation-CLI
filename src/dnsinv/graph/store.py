@@ -43,6 +43,7 @@ _WRITE_HOSTNAME = f"""
 MERGE (h:Hostname {{name: $name}})
 SET h.is_input = coalesce(h.is_input, false) OR $is_input,
     h.is_apex = coalesce(h.is_apex, false) OR $is_apex,
+    h.apex = $apex,
     h.status = $status,
     h.scanned_at = $scanned_at,
     h.failed_lookups = $failed_lookups,
@@ -201,6 +202,7 @@ def _write_hostname(tx: ManagedTransaction, scan: HostnameScan, scanned_at: date
         name=scan.name,
         is_input=target.is_input,
         is_apex=target.apex == scan.name,
+        apex=target.apex,
         status=scan.status.value,
         scanned_at=scanned_at,
         failed_lookups=[

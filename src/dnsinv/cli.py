@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import inspect
 import json
+from collections.abc import Callable
 from contextlib import ExitStack
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Annotated, NoReturn
+from typing import Annotated, Any, NoReturn
+from urllib.parse import quote
 
 import typer
 from rich.console import Console
@@ -23,6 +27,9 @@ from dnsinv.errors import EXIT_ENVIRONMENT, EXIT_USAGE, DnsInvError, UsageError
 from dnsinv.graph.connection import check_neo4j
 from dnsinv.graph.store import GraphCounts, ScanInfo, open_store
 from dnsinv.hostnames import ParsedInput, read_input_file
+from dnsinv.queries import all_queries
+from dnsinv.queries.base import Query, inline_params
+from dnsinv.queries.runner import QueryResult, run_query
 
 NEO4J_WAIT_SECONDS = 30.0
 _FAILED = {LookupStatus.TIMEOUT, LookupStatus.SERVFAIL, LookupStatus.REFUSED, LookupStatus.ERROR}
@@ -239,3 +246,163 @@ def doctor(
         typer.echo(f"[{_MARKS[check.status]}] {check.name:<9} {check.detail}")
     if not report.ok:
         raise typer.Exit(EXIT_ENVIRONMENT)
+
+
+# ---- query ------------------------------------------------------------------------
+
+query_app = typer.Typer(help="Investigation queries over the stored graph.", no_args_is_help=True)
+run_app = typer.Typer(
+    help="Run an investigation query. Each query is a subcommand with its own options.",
+    no_args_is_help=True,
+)
+app.add_typer(query_app, name="query")
+query_app.add_typer(run_app, name="run")
+
+NEO4J_BROWSER_URL = "http://localhost:7474"
+
+
+class OutputFormat(StrEnum):
+    TABLE = "table"
+    JSON = "json"
+
+
+@query_app.command("list")
+def query_list() -> None:
+    """List the available investigation queries."""
+    queries = all_queries()
+    width = max(len(q.name) for q in queries)
+    for query in queries:
+        typer.echo(f"{query.name:<{width}}  {query.summary}")
+
+
+def _query_command(query: Query) -> Callable[..., None]:
+    """A Typer command for one query: its own options plus --format and --cypher.
+
+    Built from the query definition, so a new query file needs no CLI code.
+    """
+
+    def command(**values: Any) -> None:
+        output_format = values.pop("output_format")
+        show_cypher = values.pop("cypher")
+        _run_query_command(query, values, output_format, show_cypher)
+
+    keyword = inspect.Parameter.KEYWORD_ONLY
+    parameters = [
+        inspect.Parameter(
+            option.name,
+            keyword,
+            default=option.default,
+            annotation=Annotated[option.type, typer.Option(option.flag, help=option.help)],
+        )
+        for option in query.options
+    ]
+    parameters += [
+        inspect.Parameter(
+            "output_format",
+            keyword,
+            default=OutputFormat.TABLE,
+            annotation=Annotated[OutputFormat, typer.Option("--format", help="Output format.")],
+        ),
+        inspect.Parameter(
+            "cypher",
+            keyword,
+            default=False,
+            annotation=Annotated[
+                bool,
+                typer.Option(
+                    "--cypher",
+                    help="Print a Cypher query that draws the result as a graph in Neo4j "
+                    "Browser, and exit without running it.",
+                ),
+            ],
+        ),
+    ]
+    command.__signature__ = inspect.Signature(parameters)  # type: ignore[attr-defined]
+    command.__name__ = query.name.replace("-", "_")
+    command.__doc__ = query.description
+    return command
+
+
+def _run_query_command(
+    query: Query, values: dict[str, Any], output_format: OutputFormat, show_cypher: bool
+) -> None:
+    try:
+        params = query.params(values)
+        if show_cypher:
+            cypher = inline_params(query.cypher(graph=True), params)
+            typer.echo(cypher)
+            # Neo4j Browser opens with the query already in its editor (checked on 5.26).
+            link = f"{NEO4J_BROWSER_URL}/browser/?cmd=edit&arg={quote(cypher.strip())}"
+            _status(
+                "Open this link to see the result as a graph in Neo4j Browser "
+                f"(user neo4j), then press Run:\n{link}"
+            )
+            return
+        with open_store(Settings.from_env(), NEO4J_WAIT_SECONDS, _status) as store:
+            scans = store.scans()
+            if scans:
+                result = run_query(store, query, values)
+            else:
+                _status("The graph is empty: run `dnsinv ingest FILE` first.")
+                result = QueryResult(query.columns, [])
+    except DnsInvError as exc:
+        _fail(exc)
+
+    if output_format is OutputFormat.JSON:
+        _print_query_json(query, params, scans, result)
+    elif scans:
+        _print_query_table(scans, result)
+
+
+def _print_query_json(
+    query: Query, params: dict[str, Any], scans: list[ScanInfo], result: QueryResult
+) -> None:
+    data = {
+        "query": query.name,
+        "options": params,
+        "scans": [
+            {
+                "source": scan.source,
+                "scanned_at": scan.scanned_at.isoformat(timespec="seconds"),
+                "resolver": scan.resolver,
+                "hostnames": scan.hostnames,
+            }
+            for scan in scans
+        ],
+        "rows": result.rows,
+    }
+    typer.echo(json.dumps(data, indent=2, ensure_ascii=False, default=str))
+
+
+def _print_query_table(scans: list[ScanInfo], result: QueryResult) -> None:
+    for scan in scans:
+        when = scan.scanned_at.strftime("%Y-%m-%d %H:%M UTC")
+        typer.echo(f"Scan of {scan.source} at {when} (resolver {scan.resolver})")
+    typer.echo("")
+    if not result.rows:
+        typer.echo("No results.")
+        return
+
+    cells = [[_cell(row.get(column)) for column in result.columns] for row in result.rows]
+    headers = [column.upper() for column in result.columns]
+    widths = [max(len(h), *(len(r[i]) for r in cells)) for i, h in enumerate(headers)]
+    typer.echo("  ".join(h.ljust(w) for h, w in zip(headers, widths, strict=True)).rstrip())
+    for row in cells:
+        typer.echo("  ".join(c.ljust(w) for c, w in zip(row, widths, strict=True)).rstrip())
+    count = len(result.rows)
+    typer.echo("")
+    typer.echo(f"{count} result{'s' if count != 1 else ''}")
+
+
+def _cell(value: Any) -> str:
+    if value is None:
+        return "-"
+    if isinstance(value, list):
+        return ", ".join(str(v) for v in value)
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return str(value)
+
+
+for _query in all_queries():
+    run_app.command(_query.name, help=_query.description)(_query_command(_query))
