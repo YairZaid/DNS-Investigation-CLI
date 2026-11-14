@@ -1,0 +1,57 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 15189
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: ceac71e75c529db5010000006af89a600b906b4b14c37a26 (good)
+;; QUESTION SECTION:
+;mail.test.lab.			IN	A
+
+;; ANSWER SECTION:
+mail.test.lab.		60	IN	A	192.0.2.20
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 8509
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: ceac71e75c529db5010000006af89a600b906b4b14c37a26 (good)
+;; QUESTION SECTION:
+;mail.test.lab.			IN	AAAA
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 46734
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: ceac71e75c529db5010000006af89a600b906b4b14c37a26 (good)
+;; QUESTION SECTION:
+;mail.test.lab.			IN	MX
+
+;; ANSWER SECTION:
+mail.test.lab.		60	IN	MX	10 mx1.test.lab.
+mail.test.lab.		60	IN	MX	20 mx2.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 25362
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: ceac71e75c529db5010000006af89a600b906b4b14c37a26 (good)
+;; QUESTION SECTION:
+;mail.test.lab.			IN	TXT
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 5037
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: ceac71e75c529db5010000006af89a600b906b4b14c37a26 (good)
+;; QUESTION SECTION:
+;mail.test.lab.			IN	CNAME
+

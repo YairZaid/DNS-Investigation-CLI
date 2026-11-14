@@ -1,0 +1,6 @@
+https://www.github.com/features
+https://www.microsoft.com
+example.com
+https://docs.python.org/3/
+https://this-name-does-not-exist-zz91.example.org
+localhost

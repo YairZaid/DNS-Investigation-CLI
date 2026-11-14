@@ -115,8 +115,35 @@ Smaller decisions made while building the parser, each covered by a test:
 - **A numeric last label is rejected** (`999.1.1.1`): it is a malformed IP address, not a hostname.
 - **A `parse` command was added.** It was not in the original plan. It shows how a file is read, which lines were rejected and why, without touching DNS or Neo4j. I built it to verify this stage, and kept it because a user preparing an input file needs the same view.
 
+## 12. Showing the graph, not only tables
+
+**Suggestion I received.** Neo4j ships a browser UI, so the interviewer should see the graph itself, not only terminal tables: add a flag that prints a ready-to-paste Cypher query returning nodes and relationships, add `--open-browser`, and put a screenshot in the README.
+
+**What I changed.** Adopted the flag (`--cypher`) and the screenshot. Dropped `--open-browser`: the tool runs in a container and cannot open a browser on the host. And one risk the suggestion did not mention: two versions of each query can drift apart, so the table says one thing and the picture another. Both versions are therefore built from the same `MATCH` clause, and an integration test checks that they return the same domains.
+
+## 13. What dig really prints: two labs before writing the parser
+
+**Question.** The whole graph depends on parsing `dig` correctly, and one assumption was still unverified: that a dangling CNAME comes back as the CNAME together with NXDOMAIN. I had no real dangling record I was allowed to test against.
+
+**What I did.** Built two throwaway labs in a container and recorded the output of the exact command the tool runs. The recordings are now the parser's test fixtures ([`tests/fixtures/dig`](../tests/fixtures/dig/README.md)).
+
+1. BIND 9.20, authoritative for a test zone with a plain name, CNAME chains, a CNAME loop, a null MX and awkward TXT records.
+2. Unbound, a real recursive resolver, in front of two separate authoritative servers, so that a CNAME crossing from one zone to the other has to be chased by the resolver, as on the internet.
+
+**What it confirmed.** A dangling CNAME returns the CNAME and NXDOMAIN for A, AAAA, MX and TXT, while the CNAME lookup itself returns NOERROR. So the name exists and the response code describes the end of the chain. A CNAME to a name that exists but has no address returns NOERROR, so the two cases are distinguishable.
+
+**What it changed.**
+
+- **The parser I had planned was wrong.** BIND prints `; EDNS:` and `; COOKIE:` lines that start with the same character as a question line. Earlier experiments ran through Docker's resolver, which prints none. The parser now tracks which section it is in.
+- **Statuses can disagree between the five lookups of one name.** In one recording the A lookup was SERVFAIL while the others answered. The rule: NXDOMAIN wins, because it is about the name and not the record type; otherwise any successful lookup outweighs a failed one.
+- **A CNAME loop** comes back as SERVFAIL with both links in the answer. The chain is cut and marked as a loop instead of being reported as dangling.
+
+**What the first live run found: NXDOMAIN is not always NXDOMAIN.** A made-up name under `example.org` came back NOERROR with no records, from 1.1.1.1, 8.8.8.8 and 9.9.9.9 alike. The zone is hosted on Cloudflare with DNSSEC, which answers for nonexistent names with a signed "no data" response (compact denial of existence, RFC 9824) instead of NXDOMAIN. The only trace is an NSEC record carrying the marker type `TYPE128`, visible with `+dnssec +authority`. A made-up name under `python.org`, `azurewebsites.net` or `cloudapp.net` returns a normal NXDOMAIN.
+
+**Decision.** Not handled in this version. It is recorded as a limitation, with the fix known: add `+dnssec +authority` and treat that NSEC marker as NXDOMAIN. It does not affect the shared-infrastructure and provider queries, which do not depend on whether a name exists.
+
 ---
 
 ## Open questions
 
-- **Dangling CNAME output.** The exact `dig` output for a CNAME whose target is NXDOMAIN follows from the DNS standard but has not been observed against a real case yet. To be checked in the collection stage, before any query relies on it.
+- **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.

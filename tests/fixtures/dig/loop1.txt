@@ -1,0 +1,73 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 63332
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 309bd4a877492854010000006af89a60551c6236701ffecb (good)
+; EDE: 0 (Other): (max. restarts reached)
+;; QUESTION SECTION:
+;loop1.test.lab.			IN	A
+
+;; ANSWER SECTION:
+loop1.test.lab.		60	IN	CNAME	loop2.test.lab.
+loop2.test.lab.		60	IN	CNAME	loop1.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 5604
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 309bd4a877492854010000006af89a60551c6236701ffecb (good)
+; EDE: 0 (Other): (max. restarts reached)
+;; QUESTION SECTION:
+;loop1.test.lab.			IN	AAAA
+
+;; ANSWER SECTION:
+loop1.test.lab.		60	IN	CNAME	loop2.test.lab.
+loop2.test.lab.		60	IN	CNAME	loop1.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 58983
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 309bd4a877492854010000006af89a60551c6236701ffecb (good)
+; EDE: 0 (Other): (max. restarts reached)
+;; QUESTION SECTION:
+;loop1.test.lab.			IN	MX
+
+;; ANSWER SECTION:
+loop1.test.lab.		60	IN	CNAME	loop2.test.lab.
+loop2.test.lab.		60	IN	CNAME	loop1.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 31241
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 309bd4a877492854010000006af89a60551c6236701ffecb (good)
+; EDE: 0 (Other): (max. restarts reached)
+;; QUESTION SECTION:
+;loop1.test.lab.			IN	TXT
+
+;; ANSWER SECTION:
+loop1.test.lab.		60	IN	CNAME	loop2.test.lab.
+loop2.test.lab.		60	IN	CNAME	loop1.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 62106
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 309bd4a877492854010000006af89a60551c6236701ffecb (good)
+;; QUESTION SECTION:
+;loop1.test.lab.			IN	CNAME
+
+;; ANSWER SECTION:
+loop1.test.lab.		60	IN	CNAME	loop2.test.lab.
+

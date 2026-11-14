@@ -1,0 +1,73 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 53385
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: cdd763a334bee672010000006af89a60c0d6e677cb6b978f (good)
+;; QUESTION SECTION:
+;chain1.test.lab.		IN	A
+
+;; ANSWER SECTION:
+chain1.test.lab.	60	IN	CNAME	chain2.test.lab.
+chain2.test.lab.	60	IN	CNAME	dangling-out.test.lab.
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 702
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: cdd763a334bee672010000006af89a60c0d6e677cb6b978f (good)
+;; QUESTION SECTION:
+;chain1.test.lab.		IN	AAAA
+
+;; ANSWER SECTION:
+chain1.test.lab.	60	IN	CNAME	chain2.test.lab.
+chain2.test.lab.	60	IN	CNAME	dangling-out.test.lab.
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 21040
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: cdd763a334bee672010000006af89a60c0d6e677cb6b978f (good)
+;; QUESTION SECTION:
+;chain1.test.lab.		IN	MX
+
+;; ANSWER SECTION:
+chain1.test.lab.	60	IN	CNAME	chain2.test.lab.
+chain2.test.lab.	60	IN	CNAME	dangling-out.test.lab.
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 44884
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: cdd763a334bee672010000006af89a60c0d6e677cb6b978f (good)
+;; QUESTION SECTION:
+;chain1.test.lab.		IN	TXT
+
+;; ANSWER SECTION:
+chain1.test.lab.	60	IN	CNAME	chain2.test.lab.
+chain2.test.lab.	60	IN	CNAME	dangling-out.test.lab.
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 5346
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: cdd763a334bee672010000006af89a60c0d6e677cb6b978f (good)
+;; QUESTION SECTION:
+;chain1.test.lab.		IN	CNAME
+
+;; ANSWER SECTION:
+chain1.test.lab.	60	IN	CNAME	chain2.test.lab.
+

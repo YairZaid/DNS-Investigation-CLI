@@ -1,0 +1,62 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: SERVFAIL, id: 64628
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 529b7c58079bb4db010000006af89a5fb759d3096f000304 (good)
+;; QUESTION SECTION:
+;dangling-out.test.lab.		IN	A
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 62931
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 529b7c58079bb4db010000006af89a601e344ffe650a9b15 (good)
+;; QUESTION SECTION:
+;dangling-out.test.lab.		IN	AAAA
+
+;; ANSWER SECTION:
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 46025
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 529b7c58079bb4db010000006af89a601e344ffe650a9b15 (good)
+;; QUESTION SECTION:
+;dangling-out.test.lab.		IN	MX
+
+;; ANSWER SECTION:
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 29642
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 529b7c58079bb4db010000006af89a601e344ffe650a9b15 (good)
+;; QUESTION SECTION:
+;dangling-out.test.lab.		IN	TXT
+
+;; ANSWER SECTION:
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 33754
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 529b7c58079bb4db010000006af89a601e344ffe650a9b15 (good)
+;; QUESTION SECTION:
+;dangling-out.test.lab.		IN	CNAME
+
+;; ANSWER SECTION:
+dangling-out.test.lab.	60	IN	CNAME	this-name-does-not-exist-zz91.example.com.
+

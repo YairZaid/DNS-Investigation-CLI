@@ -1,0 +1,61 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 7150
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xok.test.lab.			IN	A
+
+;; ANSWER SECTION:
+xok.test.lab.		60	IN	CNAME	exists.other.lab.
+exists.other.lab.	60	IN	A	192.0.2.50
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 587
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xok.test.lab.			IN	AAAA
+
+;; ANSWER SECTION:
+xok.test.lab.		60	IN	CNAME	exists.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 46490
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xok.test.lab.			IN	MX
+
+;; ANSWER SECTION:
+xok.test.lab.		60	IN	CNAME	exists.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 38181
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xok.test.lab.			IN	TXT
+
+;; ANSWER SECTION:
+xok.test.lab.		60	IN	CNAME	exists.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 48299
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xok.test.lab.			IN	CNAME
+
+;; ANSWER SECTION:
+xok.test.lab.		60	IN	CNAME	exists.other.lab.
+

@@ -1,0 +1,50 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 19492
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: af1298ca0acda786010000006af89a6009f5bc0a5eb7480f (good)
+;; QUESTION SECTION:
+;missing.test.lab.		IN	A
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 37766
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: af1298ca0acda786010000006af89a6009f5bc0a5eb7480f (good)
+;; QUESTION SECTION:
+;missing.test.lab.		IN	AAAA
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 5842
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: af1298ca0acda786010000006af89a6009f5bc0a5eb7480f (good)
+;; QUESTION SECTION:
+;missing.test.lab.		IN	MX
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 22713
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: af1298ca0acda786010000006af89a6009f5bc0a5eb7480f (good)
+;; QUESTION SECTION:
+;missing.test.lab.		IN	TXT
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 27288
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: af1298ca0acda786010000006af89a6009f5bc0a5eb7480f (good)
+;; QUESTION SECTION:
+;missing.test.lab.		IN	CNAME
+

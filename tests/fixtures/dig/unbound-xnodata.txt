@@ -1,0 +1,61 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4832
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xnodata.test.lab.		IN	A
+
+;; ANSWER SECTION:
+xnodata.test.lab.	60	IN	CNAME	txtonly.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 62519
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xnodata.test.lab.		IN	AAAA
+
+;; ANSWER SECTION:
+xnodata.test.lab.	60	IN	CNAME	txtonly.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 53235
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xnodata.test.lab.		IN	MX
+
+;; ANSWER SECTION:
+xnodata.test.lab.	60	IN	CNAME	txtonly.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 17012
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xnodata.test.lab.		IN	TXT
+
+;; ANSWER SECTION:
+xnodata.test.lab.	60	IN	CNAME	txtonly.other.lab.
+txtonly.other.lab.	60	IN	TXT	"no address here"
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47252
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xnodata.test.lab.		IN	CNAME
+
+;; ANSWER SECTION:
+xnodata.test.lab.	60	IN	CNAME	txtonly.other.lab.
+

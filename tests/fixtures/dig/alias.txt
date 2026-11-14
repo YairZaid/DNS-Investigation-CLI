@@ -1,0 +1,68 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 37298
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 2c767e6c2f7fed2a010000006af89a5fec2fed81e86cd778 (good)
+;; QUESTION SECTION:
+;alias.test.lab.			IN	A
+
+;; ANSWER SECTION:
+alias.test.lab.		60	IN	CNAME	ok.test.lab.
+ok.test.lab.		60	IN	A	192.0.2.11
+ok.test.lab.		60	IN	A	192.0.2.10
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 36222
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 2c767e6c2f7fed2a010000006af89a5fec2fed81e86cd778 (good)
+;; QUESTION SECTION:
+;alias.test.lab.			IN	AAAA
+
+;; ANSWER SECTION:
+alias.test.lab.		60	IN	CNAME	ok.test.lab.
+ok.test.lab.		60	IN	AAAA	2001:db8::10
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 36156
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 2c767e6c2f7fed2a010000006af89a5fec2fed81e86cd778 (good)
+;; QUESTION SECTION:
+;alias.test.lab.			IN	MX
+
+;; ANSWER SECTION:
+alias.test.lab.		60	IN	CNAME	ok.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 25871
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 2c767e6c2f7fed2a010000006af89a5fec2fed81e86cd778 (good)
+;; QUESTION SECTION:
+;alias.test.lab.			IN	TXT
+
+;; ANSWER SECTION:
+alias.test.lab.		60	IN	CNAME	ok.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 29473
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 2c767e6c2f7fed2a010000006af89a5fec2fed81e86cd778 (good)
+;; QUESTION SECTION:
+;alias.test.lab.			IN	CNAME
+
+;; ANSWER SECTION:
+alias.test.lab.		60	IN	CNAME	ok.test.lab.
+

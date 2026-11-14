@@ -1,0 +1,72 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43177
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 4, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 27a67c531920ed8c010000006af89a60d7a6b48f74183003 (good)
+;; QUESTION SECTION:
+;goodchain1.test.lab.		IN	A
+
+;; ANSWER SECTION:
+goodchain1.test.lab.	60	IN	CNAME	goodchain2.test.lab.
+goodchain2.test.lab.	60	IN	CNAME	ok.test.lab.
+ok.test.lab.		60	IN	A	192.0.2.11
+ok.test.lab.		60	IN	A	192.0.2.10
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 11123
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 27a67c531920ed8c010000006af89a60d7a6b48f74183003 (good)
+;; QUESTION SECTION:
+;goodchain1.test.lab.		IN	AAAA
+
+;; ANSWER SECTION:
+goodchain1.test.lab.	60	IN	CNAME	goodchain2.test.lab.
+goodchain2.test.lab.	60	IN	CNAME	ok.test.lab.
+ok.test.lab.		60	IN	AAAA	2001:db8::10
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 18892
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 27a67c531920ed8c010000006af89a60d7a6b48f74183003 (good)
+;; QUESTION SECTION:
+;goodchain1.test.lab.		IN	MX
+
+;; ANSWER SECTION:
+goodchain1.test.lab.	60	IN	CNAME	goodchain2.test.lab.
+goodchain2.test.lab.	60	IN	CNAME	ok.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 57696
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 27a67c531920ed8c010000006af89a60d7a6b48f74183003 (good)
+;; QUESTION SECTION:
+;goodchain1.test.lab.		IN	TXT
+
+;; ANSWER SECTION:
+goodchain1.test.lab.	60	IN	CNAME	goodchain2.test.lab.
+goodchain2.test.lab.	60	IN	CNAME	ok.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 27796
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 27a67c531920ed8c010000006af89a60d7a6b48f74183003 (good)
+;; QUESTION SECTION:
+;goodchain1.test.lab.		IN	CNAME
+
+;; ANSWER SECTION:
+goodchain1.test.lab.	60	IN	CNAME	goodchain2.test.lab.
+

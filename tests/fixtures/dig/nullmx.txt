@@ -1,0 +1,56 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 15092
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: e9cde9819259af16010000006af89a6053b2fec8f5e27055 (good)
+;; QUESTION SECTION:
+;nullmx.test.lab.		IN	A
+
+;; ANSWER SECTION:
+nullmx.test.lab.	60	IN	A	192.0.2.21
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 406
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: e9cde9819259af16010000006af89a6053b2fec8f5e27055 (good)
+;; QUESTION SECTION:
+;nullmx.test.lab.		IN	AAAA
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 15311
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: e9cde9819259af16010000006af89a6053b2fec8f5e27055 (good)
+;; QUESTION SECTION:
+;nullmx.test.lab.		IN	MX
+
+;; ANSWER SECTION:
+nullmx.test.lab.	60	IN	MX	0 .
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54824
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: e9cde9819259af16010000006af89a6053b2fec8f5e27055 (good)
+;; QUESTION SECTION:
+;nullmx.test.lab.		IN	TXT
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 11393
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: e9cde9819259af16010000006af89a6053b2fec8f5e27055 (good)
+;; QUESTION SECTION:
+;nullmx.test.lab.		IN	CNAME
+

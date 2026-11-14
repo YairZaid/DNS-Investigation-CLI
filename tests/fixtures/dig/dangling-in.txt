@@ -1,0 +1,65 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 54669
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 7a98c99569b679cf010000006af89a5faabe6e25cd8c1da7 (good)
+;; QUESTION SECTION:
+;dangling-in.test.lab.		IN	A
+
+;; ANSWER SECTION:
+dangling-in.test.lab.	60	IN	CNAME	gone.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 9553
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 7a98c99569b679cf010000006af89a5faabe6e25cd8c1da7 (good)
+;; QUESTION SECTION:
+;dangling-in.test.lab.		IN	AAAA
+
+;; ANSWER SECTION:
+dangling-in.test.lab.	60	IN	CNAME	gone.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 51472
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 7a98c99569b679cf010000006af89a5faabe6e25cd8c1da7 (good)
+;; QUESTION SECTION:
+;dangling-in.test.lab.		IN	MX
+
+;; ANSWER SECTION:
+dangling-in.test.lab.	60	IN	CNAME	gone.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 25238
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 7a98c99569b679cf010000006af89a5faabe6e25cd8c1da7 (good)
+;; QUESTION SECTION:
+;dangling-in.test.lab.		IN	TXT
+
+;; ANSWER SECTION:
+dangling-in.test.lab.	60	IN	CNAME	gone.test.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 6535
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 7a98c99569b679cf010000006af89a5faabe6e25cd8c1da7 (good)
+;; QUESTION SECTION:
+;dangling-in.test.lab.		IN	CNAME
+
+;; ANSWER SECTION:
+dangling-in.test.lab.	60	IN	CNAME	gone.test.lab.
+

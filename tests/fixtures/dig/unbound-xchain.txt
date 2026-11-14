@@ -1,0 +1,64 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 43036
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xchain.test.lab.		IN	A
+
+;; ANSWER SECTION:
+xchain.test.lab.	60	IN	CNAME	xdangling.test.lab.
+xdangling.test.lab.	60	IN	CNAME	gone.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 28211
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xchain.test.lab.		IN	AAAA
+
+;; ANSWER SECTION:
+xchain.test.lab.	60	IN	CNAME	xdangling.test.lab.
+xdangling.test.lab.	60	IN	CNAME	gone.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 12036
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xchain.test.lab.		IN	MX
+
+;; ANSWER SECTION:
+xchain.test.lab.	60	IN	CNAME	xdangling.test.lab.
+xdangling.test.lab.	60	IN	CNAME	gone.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 12896
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xchain.test.lab.		IN	TXT
+
+;; ANSWER SECTION:
+xchain.test.lab.	60	IN	CNAME	xdangling.test.lab.
+xdangling.test.lab.	60	IN	CNAME	gone.other.lab.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43863
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;xchain.test.lab.		IN	CNAME
+
+;; ANSWER SECTION:
+xchain.test.lab.	60	IN	CNAME	xdangling.test.lab.
+

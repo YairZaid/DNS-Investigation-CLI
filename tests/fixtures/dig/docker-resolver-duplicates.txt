@@ -1,0 +1,57 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 54635
+;; flags: qr rd ra; QUERY: 1, ANSWER: 6, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;www.microsoft.com.		IN	A
+
+;; ANSWER SECTION:
+www.microsoft.com.	15	IN	CNAME	www.microsoft.com-c-3.edgekey.net.
+www.microsoft.com-c-3.edgekey.net. 2 IN	CNAME	e13678.dscb.akamaiedge.net.
+e13678.dscb.akamaiedge.net. 2	IN	A	23.221.30.94
+www.microsoft.com-c-3.edgekey.net. 15 IN CNAME	e13678.dscb.akamaiedge.net.
+e13678.dscb.akamaiedge.net. 2	IN	A	23.221.30.94
+e13678.dscb.akamaiedge.net. 2	IN	A	23.221.30.94
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47221
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;www.microsoft.com.		IN	AAAA
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47451
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;www.microsoft.com.		IN	MX
+
+;; ANSWER SECTION:
+www.microsoft.com.	393	IN	CNAME	www.microsoft.com-c-3.edgekey.net.
+www.microsoft.com-c-3.edgekey.net. 333 IN CNAME	e13678.dscb.akamaiedge.net.
+www.microsoft.com-c-3.edgekey.net. 393 IN CNAME	e13678.dscb.akamaiedge.net.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 53583
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;www.microsoft.com.		IN	TXT
+
+;; ANSWER SECTION:
+www.microsoft.com.	15	IN	CNAME	www.microsoft.com-c-3.edgekey.net.
+www.microsoft.com-c-3.edgekey.net. 333 IN CNAME	e13678.dscb.akamaiedge.net.
+www.microsoft.com-c-3.edgekey.net. 15 IN CNAME	e13678.dscb.akamaiedge.net.
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 50392
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 0
+
+;; QUESTION SECTION:
+;www.microsoft.com.		IN	CNAME
+
+;; ANSWER SECTION:
+www.microsoft.com.	15	IN	CNAME	www.microsoft.com-c-3.edgekey.net.
+www.microsoft.com-c-3.edgekey.net. 15 IN CNAME	e13678.dscb.akamaiedge.net.
+

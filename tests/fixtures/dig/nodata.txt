@@ -1,0 +1,53 @@
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 64663
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 059dfe03692f2603010000006af89a608a99836745bd8d3f (good)
+;; QUESTION SECTION:
+;nodata.test.lab.		IN	A
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 34682
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 059dfe03692f2603010000006af89a608a99836745bd8d3f (good)
+;; QUESTION SECTION:
+;nodata.test.lab.		IN	AAAA
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 36860
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 059dfe03692f2603010000006af89a608a99836745bd8d3f (good)
+;; QUESTION SECTION:
+;nodata.test.lab.		IN	MX
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 6787
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 059dfe03692f2603010000006af89a608a99836745bd8d3f (good)
+;; QUESTION SECTION:
+;nodata.test.lab.		IN	TXT
+
+;; ANSWER SECTION:
+nodata.test.lab.	60	IN	TXT	"only txt here"
+
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 35462
+;; flags: qr aa rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 059dfe03692f2603010000006af89a608a99836745bd8d3f (good)
+;; QUESTION SECTION:
+;nodata.test.lab.		IN	CNAME
+

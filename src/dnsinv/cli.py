@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, NoReturn
 
 import typer
+from rich.console import Console
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn
 
+from dnsinv.collection.export import scan_report
+from dnsinv.collection.resolver import ResolverChoice, select_resolver
 from dnsinv.collection.runner import run_subprocess
+from dnsinv.collection.scanner import (
+    DEFAULT_WORKERS,
+    HostnameScan,
+    ScanTarget,
+    plan_targets,
+    scan_all,
+)
 from dnsinv.config import Settings
 from dnsinv.doctor import CheckStatus, run_doctor
-from dnsinv.errors import EXIT_ENVIRONMENT, EXIT_USAGE, DnsInvError
+from dnsinv.errors import EXIT_ENVIRONMENT, EXIT_USAGE, DnsInvError, UsageError
 from dnsinv.graph.connection import check_neo4j
 from dnsinv.hostnames import ParsedInput, read_input_file
 
@@ -51,6 +64,73 @@ def parse(
     if not result.hostnames:
         typer.echo("Error: the file has no valid hostnames", err=True)
         raise typer.Exit(EXIT_USAGE)
+
+
+@app.command()
+def ingest(
+    file: Annotated[Path, typer.Argument(help="Text file with one URL per line.")],
+    dry_run: Annotated[
+        bool, typer.Option("--dry-run", help="Print the scan as JSON instead of storing it.")
+    ] = False,
+    resolver: Annotated[
+        str | None, typer.Option(help="Resolver IP to use instead of the default 1.1.1.1.")
+    ] = None,
+    workers: Annotated[
+        int, typer.Option(min=1, max=64, help="Hostnames scanned at the same time.")
+    ] = DEFAULT_WORKERS,
+    no_apex: Annotated[
+        bool, typer.Option("--no-apex", help="Scan only the hostnames in the file.")
+    ] = False,
+) -> None:
+    """Scan the hostnames in FILE with dig: A, AAAA, MX, TXT and CNAME records."""
+    try:
+        parsed = read_input_file(file)
+        if not parsed.hostnames:
+            raise UsageError(f"{file} has no valid hostnames (run `dnsinv parse {file}`)")
+        if not dry_run:
+            raise UsageError("storing to Neo4j is not implemented yet; use --dry-run")
+        choice = select_resolver(run_subprocess, resolver)
+        if choice.warning:
+            _status(f"Warning: {choice.warning}")
+        _status(f"Using resolver: {choice.describe()}")
+        if parsed.rejected:
+            _status(f"Skipping {len(parsed.rejected)} rejected lines (run `dnsinv parse {file}`)")
+
+        targets = plan_targets(parsed.hostnames, include_apex=not no_apex)
+        scanned_at = datetime.now(UTC)
+        scans = _scan_with_progress(targets, choice, workers)
+    except DnsInvError as exc:
+        _fail(exc)
+
+    report = scan_report(
+        source=file.as_posix(),
+        scanned_at=scanned_at,
+        resolver=choice,
+        scans=scans,
+        rejected=parsed.rejected,
+    )
+    typer.echo(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+def _scan_with_progress(
+    targets: list[ScanTarget], resolver: ResolverChoice, workers: int
+) -> list[HostnameScan]:
+    # Progress goes to stderr so stdout stays clean JSON.
+    with Progress(
+        TextColumn("Scanning"),
+        BarColumn(),
+        MofNCompleteColumn(),
+        console=Console(stderr=True),
+        transient=True,
+    ) as progress:
+        task = progress.add_task("scan", total=len(targets))
+        return scan_all(
+            targets,
+            run_subprocess,
+            resolver,
+            workers=workers,
+            on_done=lambda _: progress.advance(task),
+        )
 
 
 def _print_parsed(result: ParsedInput) -> None:
