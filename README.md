@@ -6,7 +6,7 @@ A command-line tool that reads a file of URLs, collects the A, AAAA, MX, TXT and
 
 - **`shared-infra`**: which domains share infrastructure (addresses, CNAME targets, mail servers), and whether that sharing means anything.
 - **`providers`**: which third-party providers each domain depends on, with the DNS evidence for each. This is the additional query of my choice.
-- **Subdomain takeover**: the interviewer asked for an explanation instead of a query. See [docs/SUBDOMAIN-TAKEOVER.md](docs/SUBDOMAIN-TAKEOVER.md), which also shows how the collected data supports detection.
+- **Subdomain takeover**: see [docs/SUBDOMAIN-TAKEOVER.md](docs/SUBDOMAIN-TAKEOVER.md), which explains how it happens, especially with S3 buckets, and shows how the collected data supports detection.
 
 ## Quick start
 
