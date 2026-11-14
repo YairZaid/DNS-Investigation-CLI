@@ -6,9 +6,8 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from dnsinv.collection.model import DnsRecord, Lookup
+from dnsinv.collection.model import DnsRecord, HostnameScan, Lookup
 from dnsinv.collection.resolver import ResolverChoice
-from dnsinv.collection.scanner import HostnameScan
 from dnsinv.hostnames import RejectedLine
 
 

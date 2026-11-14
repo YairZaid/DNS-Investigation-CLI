@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import ExitStack
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, NoReturn
@@ -12,20 +13,19 @@ from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, TextColumn
 
 from dnsinv.collection.export import scan_report
+from dnsinv.collection.model import HostnameScan, LookupStatus, ScanTarget
 from dnsinv.collection.resolver import ResolverChoice, select_resolver
 from dnsinv.collection.runner import run_subprocess
-from dnsinv.collection.scanner import (
-    DEFAULT_WORKERS,
-    HostnameScan,
-    ScanTarget,
-    plan_targets,
-    scan_all,
-)
+from dnsinv.collection.scanner import DEFAULT_WORKERS, plan_targets, scan_all
 from dnsinv.config import Settings
 from dnsinv.doctor import CheckStatus, run_doctor
 from dnsinv.errors import EXIT_ENVIRONMENT, EXIT_USAGE, DnsInvError, UsageError
 from dnsinv.graph.connection import check_neo4j
+from dnsinv.graph.store import GraphCounts, ScanInfo, open_store
 from dnsinv.hostnames import ParsedInput, read_input_file
+
+NEO4J_WAIT_SECONDS = 30.0
+_FAILED = {LookupStatus.TIMEOUT, LookupStatus.SERVFAIL, LookupStatus.REFUSED, LookupStatus.ERROR}
 
 app = typer.Typer(
     help="Collect DNS records for the hostnames in a list of URLs, store them in Neo4j, "
@@ -81,35 +81,100 @@ def ingest(
     no_apex: Annotated[
         bool, typer.Option("--no-apex", help="Scan only the hostnames in the file.")
     ] = False,
+    append: Annotated[
+        bool,
+        typer.Option("--append", help="Add to the graph instead of replacing it with this scan."),
+    ] = False,
 ) -> None:
-    """Scan the hostnames in FILE with dig: A, AAAA, MX, TXT and CNAME records."""
+    """Scan the hostnames in FILE with dig (A, AAAA, MX, TXT, CNAME) and store them in Neo4j.
+
+    Each ingest replaces the whole graph, so queries always describe one file scanned at
+    one time. Use --append to combine several files in one graph.
+    """
     try:
         parsed = read_input_file(file)
         if not parsed.hostnames:
             raise UsageError(f"{file} has no valid hostnames (run `dnsinv parse {file}`)")
-        if not dry_run:
-            raise UsageError("storing to Neo4j is not implemented yet; use --dry-run")
-        choice = select_resolver(run_subprocess, resolver)
-        if choice.warning:
-            _status(f"Warning: {choice.warning}")
-        _status(f"Using resolver: {choice.describe()}")
-        if parsed.rejected:
-            _status(f"Skipping {len(parsed.rejected)} rejected lines (run `dnsinv parse {file}`)")
+        with ExitStack() as stack:
+            # Connect before scanning: fail in seconds, not after the whole scan.
+            store = (
+                None
+                if dry_run
+                else stack.enter_context(
+                    open_store(Settings.from_env(), NEO4J_WAIT_SECONDS, _status)
+                )
+            )
+            choice = select_resolver(run_subprocess, resolver)
+            if choice.warning:
+                _status(f"Warning: {choice.warning}")
+            _status(f"Using resolver: {choice.describe()}")
+            if parsed.rejected:
+                _status(
+                    f"Skipping {len(parsed.rejected)} rejected lines (run `dnsinv parse {file}`)"
+                )
 
-        targets = plan_targets(parsed.hostnames, include_apex=not no_apex)
-        scanned_at = datetime.now(UTC)
-        scans = _scan_with_progress(targets, choice, workers)
+            targets = plan_targets(parsed.hostnames, include_apex=not no_apex)
+            scanned_at = datetime.now(UTC)
+            scans = _scan_with_progress(targets, choice, workers)
+            _warn_failed_lookups(scans)
+
+            if store is None:
+                report = scan_report(
+                    source=file.as_posix(),
+                    scanned_at=scanned_at,
+                    resolver=choice,
+                    scans=scans,
+                    rejected=parsed.rejected,
+                )
+                typer.echo(json.dumps(report, indent=2, ensure_ascii=False))
+                return
+
+            info = ScanInfo(
+                source=file.as_posix(),
+                scanned_at=scanned_at,
+                resolver=choice.describe(),
+                hostnames=len(scans),
+            )
+            store.ensure_schema()
+            store.save_scan(info, scans, replace=not append)
+            counts = store.counts()
     except DnsInvError as exc:
         _fail(exc)
 
-    report = scan_report(
-        source=file.as_posix(),
-        scanned_at=scanned_at,
-        resolver=choice,
-        scans=scans,
-        rejected=parsed.rejected,
+    _print_stored(info, scans, len(parsed.rejected), counts, appended=append)
+
+
+def _warn_failed_lookups(scans: list[HostnameScan]) -> None:
+    failed = [s for s in scans if any(lk.status in _FAILED for lk in s.lookups)]
+    if failed:
+        noun = "hostname" if len(failed) == 1 else "hostnames"
+        _status(
+            f"Warning: {len(failed)} {noun} had failed lookups (timeout or server failure); "
+            "their records may be incomplete"
+        )
+
+
+def _print_stored(
+    info: ScanInfo,
+    scans: list[HostnameScan],
+    rejected: int,
+    counts: GraphCounts,
+    *,
+    appended: bool,
+) -> None:
+    inputs = sum(1 for s in scans if s.target.is_input)
+    when = info.scanned_at.strftime("%Y-%m-%d %H:%M UTC")
+    typer.echo(f"Stored scan of {info.source} at {when} (resolver {info.resolver})")
+    typer.echo(
+        f"  {inputs} hostnames from the file, {len(scans) - inputs} apex domains added, "
+        f"{rejected} rejected lines"
     )
-    typer.echo(json.dumps(report, indent=2, ensure_ascii=False))
+    nodes = ", ".join(f"{label} {n}" for label, n in counts.nodes.items())
+    rels = ", ".join(f"{rtype} {n}" for rtype, n in counts.relationships.items())
+    typer.echo(f"  Graph now: {nodes} | {rels or 'no relationships'}")
+    typer.echo(
+        "  Added to the existing graph (--append)" if appended else "  Replaced the previous graph"
+    )
 
 
 def _scan_with_progress(

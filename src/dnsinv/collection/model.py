@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -82,3 +83,39 @@ class CnameChain:
             and not self.truncated
             and self.links[-1].status is LookupStatus.NXDOMAIN
         )
+
+
+@dataclass(frozen=True)
+class ScanTarget:
+    name: str
+    is_input: bool
+    """From the input file, as opposed to an Apex Domain added by the tool."""
+    apex: str | None
+
+
+@dataclass(frozen=True)
+class HostnameScan:
+    target: ScanTarget
+    lookups: tuple[Lookup, ...]
+    chain: CnameChain
+
+    @property
+    def name(self) -> str:
+        return self.target.name
+
+    @property
+    def status(self) -> LookupStatus:
+        """Whether the scanned name itself exists. A dangling CNAME is still NOERROR here."""
+        return self.chain.links[0].status
+
+    @property
+    def records(self) -> tuple[DnsRecord, ...]:
+        """Every distinct record seen, each with the name that owns it."""
+        return distinct_records(self.lookups)
+
+    def lookup(self, rtype: RecordType) -> Lookup:
+        return next(lookup for lookup in self.lookups if lookup.rtype is rtype)
+
+
+def distinct_records(lookups: Iterable[Lookup]) -> tuple[DnsRecord, ...]:
+    return tuple(dict.fromkeys(record for lookup in lookups for record in lookup.records))

@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
 
 from dnsinv.collection.dig import PROCESS_TIMEOUT_SECONDS, build_dig_args, parse_dig_output
 from dnsinv.collection.model import (
     ChainLink,
     CnameChain,
-    DnsRecord,
+    HostnameScan,
     Lookup,
     LookupStatus,
     RecordType,
+    ScanTarget,
+    distinct_records,
 )
 from dnsinv.collection.resolver import ResolverChoice
 from dnsinv.collection.runner import CommandRunner, CommandTimeoutError
@@ -34,38 +35,6 @@ _STATUS_PRIORITY = (
     LookupStatus.ERROR,
     LookupStatus.TIMEOUT,
 )
-
-
-@dataclass(frozen=True)
-class ScanTarget:
-    name: str
-    is_input: bool
-    """From the input file, as opposed to an Apex Domain added by the tool."""
-    apex: str | None
-
-
-@dataclass(frozen=True)
-class HostnameScan:
-    target: ScanTarget
-    lookups: tuple[Lookup, ...]
-    chain: CnameChain
-
-    @property
-    def name(self) -> str:
-        return self.target.name
-
-    @property
-    def status(self) -> LookupStatus:
-        """Whether the scanned name itself exists. A dangling CNAME is still NOERROR here."""
-        return self.chain.links[0].status
-
-    @property
-    def records(self) -> tuple[DnsRecord, ...]:
-        """Every distinct record seen, each with the name that owns it."""
-        return _distinct_records(self.lookups)
-
-    def lookup(self, rtype: RecordType) -> Lookup:
-        return next(lookup for lookup in self.lookups if lookup.rtype is rtype)
 
 
 def plan_targets(hostnames: Iterable[InputHostname], *, include_apex: bool) -> list[ScanTarget]:
@@ -129,7 +98,7 @@ def _build_chain(name: str, lookups: Sequence[Lookup]) -> CnameChain:
     """
     targets = {
         record.owner: record.value
-        for record in _distinct_records(lookups)
+        for record in distinct_records(lookups)
         if record.rtype is RecordType.CNAME
     }
 
@@ -157,7 +126,3 @@ def _build_chain(name: str, lookups: Sequence[Lookup]) -> CnameChain:
 def _combined_status(lookups: Sequence[Lookup]) -> LookupStatus:
     seen = {lookup.status for lookup in lookups}
     return next(status for status in _STATUS_PRIORITY if status in seen)
-
-
-def _distinct_records(lookups: Iterable[Lookup]) -> tuple[DnsRecord, ...]:
-    return tuple(dict.fromkeys(record for lookup in lookups for record in lookup.records))

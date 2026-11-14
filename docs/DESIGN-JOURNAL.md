@@ -144,6 +144,15 @@ Smaller decisions made while building the parser, each covered by a test:
 
 ---
 
+## 14. Storing the graph
+
+- **Records hang off the name that owns them.** `www.microsoft.com` has no addresses of its own: they belong to the Akamai name at the end of its CNAME chain. Attaching them to the scanned name would hide the chain, which is exactly what shared-infrastructure and takeover analysis need to see.
+- **Scan first, write second.** Neo4j is contacted before scanning, so an unreachable database fails in seconds. But the graph is only replaced after the scan has finished, so a scan that fails half-way leaves the previous graph intact.
+- **A chain link keeps its own status if it was scanned itself**, whichever is written first. Otherwise the order of writes would decide what the graph says.
+- **Tests get their own Neo4j.** Integration tests empty the database they use. Pointing them at the same Neo4j as the CLI would silently delete the user's graph every time the tests ran, so the test service has a throwaway instance with no volume.
+
+**Checked: the same file twice.** The first real double ingest did not give identical counts: 23 addresses, then 25. The store tests already showed that identical input gives an identical graph, so I scanned the same file three times and compared every name. All were stable except one Akamai CDN name, which returned a different set of IPv6 addresses on every query. The graph was right; the internet changed. Two consequences: re-running a scan is not guaranteed to reproduce the README's numbers exactly, and shared-infrastructure results for CDN-hosted names are a sample of what the CDN hands out, not the full set.
+
 ## Open questions
 
 - **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.

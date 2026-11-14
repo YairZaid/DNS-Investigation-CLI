@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from dnsinv.collection.model import LookupStatus, RecordType
+from dnsinv.collection.model import LookupStatus, RecordType, ScanTarget
 from dnsinv.collection.resolver import ResolverChoice, ResolverSource
 from dnsinv.collection.runner import CommandNotFoundError, CommandResult, CommandTimeoutError
-from dnsinv.collection.scanner import ScanTarget, plan_targets, scan_all, scan_hostname
+from dnsinv.collection.scanner import plan_targets, scan_all, scan_hostname
 from dnsinv.hostnames import InputHostname
 from tests.fakes import FakeRunner, ok
 

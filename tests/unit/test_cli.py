@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,8 @@ from typer.testing import CliRunner
 from dnsinv import cli
 from dnsinv.collection.runner import CommandNotFoundError, CommandResult
 from dnsinv.doctor import Check, CheckStatus, DoctorReport
+from dnsinv.graph.connection import Neo4jUnavailableError
+from dnsinv.graph.store import GraphCounts
 from tests.fakes import NOERROR, UNREACHABLE, FakeRunner, ok
 
 runner = CliRunner()
@@ -229,6 +232,109 @@ def test_ingest_fallback_resolver_prints_a_warning(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "Warning: 1.1.1.1 is unreachable" in result.stderr
     assert json.loads(result.stdout)["resolver"] == "system resolver (fallback)"
+
+
+class FakeStore:
+    def __init__(self):
+        self.saved = []
+        self.schema_created = False
+        self.opened = []
+
+    def ensure_schema(self):
+        self.schema_created = True
+
+    def save_scan(self, info, scans, *, replace):
+        self.saved.append((info, list(scans), replace))
+
+    def counts(self):
+        return GraphCounts(nodes={"Hostname": 2, "IP": 3, "Scan": 1}, relationships={"CNAME_TO": 1})
+
+
+@pytest.fixture
+def fake_store(monkeypatch):
+    store = FakeStore()
+
+    @contextmanager
+    def fake_open_store(settings, timeout, on_wait=None):
+        store.opened.append(timeout)
+        yield store
+
+    monkeypatch.setattr(cli, "open_store", fake_open_store)
+    return store
+
+
+def test_ingest_stores_the_scan_and_replaces_by_default(tmp_path, fake_dig, fake_store):
+    path = write_urls(tmp_path, "alias.test.lab", "xdangling.test.lab")
+
+    result = runner.invoke(cli.app, ["ingest", path])
+
+    assert result.exit_code == 0
+    ((info, scans, replace),) = fake_store.saved
+    assert replace is True
+    assert fake_store.schema_created
+    assert info.source == path.replace("\\", "/")
+    assert info.resolver == "1.1.1.1 (default)"
+    assert info.hostnames == 2
+    assert [s.name for s in scans] == ["alias.test.lab", "xdangling.test.lab"]
+    assert "Stored scan" in result.stdout
+    assert "Hostname 2" in result.stdout
+
+
+def test_ingest_append_keeps_the_existing_graph(tmp_path, fake_dig, fake_store):
+    path = write_urls(tmp_path, "alias.test.lab")
+
+    runner.invoke(cli.app, ["ingest", path, "--append"])
+
+    ((_, _, replace),) = fake_store.saved
+    assert replace is False
+
+
+def test_ingest_reports_hostnames_whose_lookups_failed(tmp_path, fake_dig, fake_store):
+    path = write_urls(tmp_path, "alias.test.lab", "unknown.example.net")
+
+    result = runner.invoke(cli.app, ["ingest", path, "--no-apex"])
+
+    assert result.exit_code == 0
+    assert "1 hostname had failed lookups" in result.stderr
+
+
+def test_dry_run_never_opens_the_store(tmp_path, fake_dig, fake_store):
+    path = write_urls(tmp_path, "alias.test.lab")
+
+    runner.invoke(cli.app, ["ingest", path, "--dry-run"])
+
+    assert fake_store.opened == []
+
+
+def test_ingest_checks_neo4j_before_spending_time_on_dns(tmp_path, fake_dig, monkeypatch):
+    @contextmanager
+    def unavailable(settings, timeout, on_wait=None):
+        raise Neo4jUnavailableError("Neo4j is not reachable at bolt://x:7687 after 30s")
+        yield
+
+    monkeypatch.setattr(cli, "open_store", unavailable)
+    path = write_urls(tmp_path, "alias.test.lab")
+
+    result = runner.invoke(cli.app, ["ingest", path])
+
+    assert result.exit_code == 2
+    assert "not reachable" in result.stderr
+    assert all(call[-2:] == [".", "NS"] for call in fake_dig.calls)  # no hostname scanned
+
+
+def test_failed_scan_leaves_the_graph_untouched(tmp_path, monkeypatch, fake_store):
+    def respond(args):
+        if args[-2:] == [".", "NS"]:
+            return NOERROR
+        raise CommandNotFoundError("dig")
+
+    monkeypatch.setattr(cli, "run_subprocess", FakeRunner(respond))
+    path = write_urls(tmp_path, "alias.test.lab")
+
+    result = runner.invoke(cli.app, ["ingest", path])
+
+    assert result.exit_code == 2
+    assert fake_store.saved == []
 
 
 def test_doctor_passes_resolver_and_timeout_through(fake_doctor):
