@@ -179,6 +179,14 @@ Smaller decisions made while building the parser, each covered by a test:
 
 **The first live run** reported 13 providers for `github.com` from DNS alone, among them Salesforce, Zendesk, Stripe and Atlassian. All of it is public information, and it shows how much an organisation's supplier list leaks through DNS. The evidence column also showed that long values make a terminal table unreadable, so tables now shorten long values and lists; `--format json` keeps them whole.
 
+## 17. Writing the findings
+
+- **The first scan of the example file found two catalog mistakes that would have made the README wrong.** Fastly's IPv6 addresses were not recognised, so the same servers appeared as "Fastly, shared" over IPv4 and as an unknown platform over IPv6. And Google's MX hosts were not marked as a shared platform, so "eight organisations share a mail server" looked like a finding. I replaced the address ranges with the providers' own published lists (Fastly's API, Cloudflare's lists, GitHub's `meta` endpoint) instead of what I remembered. That also showed my GitHub Pages range was too broad: it covered `raw.githubusercontent.com`, which is not GitHub Pages.
+- **Every number in the README was recounted from the graph before it was written down.** Two were wrong in the first draft: the example covers 13 organisations, not 9, and OpenAI tokens appear on 5 of them, not 6.
+- **The takeover explanation is a separate document** ([SUBDOMAIN-TAKEOVER.md](SUBDOMAIN-TAKEOVER.md)), linked from the README. The assignment asks for a short README, and the explanation is what the interviewer specifically asked for, so it deserved room of its own.
+- **A clean clone found one more problem.** Running the README's commands on a fresh copy worked, but the first command printed `pull access denied for dnsinv` before building: Compose tries Docker Hub first. Harmless, but it looks like an error to someone running the project for the first time. `pull_policy: build` removes it.
+- **No graph screenshot from me.** The browser built into my tools is about 800 pixels wide, too small for readable labels. A screenshot taken in a normal browser is better than a poor one.
+
 ## Open questions
 
 - **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.
