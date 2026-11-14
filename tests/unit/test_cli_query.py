@@ -207,6 +207,14 @@ def test_cypher_prints_the_graph_query_with_values_filled_in_and_needs_no_databa
     assert unquote(link.removeprefix(prefix)) == result.stdout.strip()
 
 
+def test_cypher_link_follows_a_changed_browser_port(monkeypatch):
+    monkeypatch.setenv("NEO4J_BROWSER_URL", "http://localhost:7475")
+
+    result = runner.invoke(cli.app, ["query", "run", "shared-infra", "--cypher"])
+
+    assert "http://localhost:7475/browser/?cmd=edit&arg=" in result.stderr
+
+
 def test_neo4j_down_exits_two(monkeypatch):
     @contextmanager
     def unavailable(settings, timeout, on_wait=None):

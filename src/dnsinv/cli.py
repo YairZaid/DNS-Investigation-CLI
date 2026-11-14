@@ -417,8 +417,6 @@ run_app = typer.Typer(
 app.add_typer(query_app, name="query")
 query_app.add_typer(run_app, name="run")
 
-NEO4J_BROWSER_URL = "http://localhost:7474"
-
 
 @query_app.command("list")
 def query_list() -> None:
@@ -484,7 +482,8 @@ def _run_query_command(
             cypher = inline_params(query.cypher(graph=True), params)
             typer.echo(cypher)
             # Neo4j Browser opens with the query already in its editor (checked on 5.26).
-            link = f"{NEO4J_BROWSER_URL}/browser/?cmd=edit&arg={quote(cypher.strip())}"
+            browser = Settings.from_env().neo4j_browser_url
+            link = f"{browser}/browser/?cmd=edit&arg={quote(cypher.strip())}"
             _status(
                 "Open this link to see the result as a graph in Neo4j Browser "
                 f"(user neo4j), then press Run:\n{link}"

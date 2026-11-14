@@ -165,6 +165,37 @@ The main decisions are recorded as ADRs in [docs/adr](docs/adr/). The reasoning 
 - **No history.** "What changed since last week" is not supported.
 - **A graph stored by an older version** of the tool is not migrated; run `ingest` again after upgrading.
 
+## Troubleshooting
+
+**`dependency failed to start: container …-neo4j-1 exited`**
+
+Neo4j could not start. The usual cause is that ports 7474 or 7687 are already taken, by Neo4j Desktop, another Neo4j or an old container (`docker ps` shows the containers). To use other ports, copy `.env.example` to `.env` and change them:
+
+```
+NEO4J_HTTP_PORT=7475
+NEO4J_BOLT_PORT=7688
+```
+
+The `--cypher` link follows the new HTTP port. In Neo4j Browser's login form, set the connection URL to `localhost:7688`.
+
+If Neo4j still exits after the ports are free, the container may have been left in a broken state by the failed start. Remove the container (the stored graph is kept in its volume) and start again:
+
+```bash
+docker compose rm -f -s neo4j
+```
+
+```bash
+docker compose run --rm cli doctor
+```
+
+`docker compose down -v` starts from nothing: it also deletes the stored graph.
+
+**`doctor` warns that 1.1.1.1 is unreachable.** The network blocks outbound DNS to public resolvers. The tool uses the system resolver instead, so results may differ from the Findings above.
+
+**`The graph is empty`.** Run `ingest` first; each `docker compose down -v` deletes the graph.
+
+**A code change has no effect.** Docker builds the image once and reuses it. Rebuild it with `docker compose build`.
+
 ## Testing
 
 ```bash
