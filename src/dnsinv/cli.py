@@ -482,17 +482,12 @@ def _run_query_command(
             cypher = inline_params(query.cypher(graph=True), params)
             typer.echo(cypher)
             # Neo4j Browser opens with the query already in its editor (checked on 5.26).
-            settings = Settings.from_env()
-            link = f"{settings.neo4j_browser_url}/browser/?cmd=edit&arg={quote(cypher.strip())}"
+            browser = Settings.from_env().neo4j_browser_url
+            link = f"{browser}/browser/?cmd=edit&arg={quote(cypher.strip())}"
             _status(
                 "Open this link to see the result as a graph in Neo4j Browser "
                 f"(user neo4j), then press Run:\n{link}"
             )
-            if settings.neo4j_browser_bolt_url:
-                _status(
-                    "In the login form, set the Connection URL to "
-                    f"{settings.neo4j_browser_bolt_url}"
-                )
             return
         with open_store(Settings.from_env(), NEO4J_WAIT_SECONDS, _status) as store:
             scans = store.scans()

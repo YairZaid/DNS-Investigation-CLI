@@ -1,7 +1,6 @@
 # DNS Investigation CLI
 
 [![CI](https://github.com/YairZaid/DNS-Investigation-CLI/actions/workflows/ci.yml/badge.svg)](https://github.com/YairZaid/DNS-Investigation-CLI/actions/workflows/ci.yml)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/YairZaid/DNS-Investigation-CLI)
 
 A command-line tool that reads a file of URLs, collects the A, AAAA, MX, TXT and CNAME records of their hostnames with `dig`, stores them as a graph in Neo4j, and answers investigation questions about that graph:
 
@@ -11,76 +10,20 @@ A command-line tool that reads a file of URLs, collects the A, AAAA, MX, TXT and
 
 ## Quick start
 
-Choose where to run it. The commands are the same in both.
-
-| | **A. On your machine** | **B. In the browser, nothing installed** |
-|---|---|---|
-| You need | Docker (with Docker Compose) | A GitHub account |
-| Start | Extract the ZIP and `cd DNS-Investigation-CLI` (or `git clone https://github.com/YairZaid/DNS-Investigation-CLI.git` and `cd` into it) | Click **Open in GitHub Codespaces** above, then **Create codespace**. VS Code opens in the browser; wait until the setup terminal finishes (about two minutes) |
-| Run | The commands below, in a terminal | The commands below, in the terminal at the bottom of the window |
-| Graph | [Viewing the graph](#viewing-the-graph) | [Viewing the graph](#viewing-the-graph) |
-
-`dig`, Python and Neo4j run in containers in both cases. A codespace runs on the free monthly quota of the GitHub account that opens it, stops after 30 idle minutes, and can be deleted at [github.com/codespaces](https://github.com/codespaces).
+Needs Docker (with Docker Compose). Extract the ZIP, then:
 
 ```bash
+cd DNS-Investigation-CLI
 docker compose run --rm cli doctor
-```
-
-The first run builds the image and starts Neo4j, waiting until it is ready (about 30 seconds). `doctor` checks that `dig`, a DNS resolver and Neo4j are all available.
-
-```bash
 docker compose run --rm cli ingest examples/urls.txt
-```
-
-What DNS returned for each hostname, one line per hostname:
-
-```bash
-docker compose run --rm cli records
-```
-
-```
-┆ HOSTNAME          ┆ STATUS  ┆ CNAME                       ┆ A                  ┆ AAAA                ┆ MX              ┆ TXT ┆
-├───────────────────┼─────────┼─────────────────────────────┼────────────────────┼─────────────────────┼─────────────────┼─────┤
-┆ python.org (apex) ┆ NOERROR ┆ -                           ┆ 151.101.0.223 (+3) ┆ 2a04:4e42::223 (+3) ┆ mail.python.org ┆ 13  ┆
-┆ www.python.org    ┆ NOERROR ┆ → dualstack.python.map...   ┆ 151.101.0.223 (+3) ┆ 2a04:4e42::223 (+3) ┆ -               ┆ -   ┆
-```
-
-Every record of one hostname, or one record type for all of them, in full:
-
-```bash
-docker compose run --rm cli records --hostname python.org
-```
-
-```bash
-docker compose run --rm cli records --type MX
-```
-
-Then the investigation queries:
-
-```bash
 docker compose run --rm cli query run shared-infra --cross-apex
-```
-
-```bash
 docker compose run --rm cli query run providers
-```
-
-```bash
 docker compose run --rm cli query run outage-impact
 ```
 
-To delete the stored graph: `docker compose down -v`.
+Add `--cypher` to any query to see the result as a graph in Neo4j Browser (user `neo4j`, password `dnsinv-local`).
 
-### Viewing the graph
-
-Add `--cypher` to any query. It prints a link that opens Neo4j Browser with the query already in the editor; sign in as `neo4j` with password `dnsinv-local` and press **Run**.
-
-```bash
-docker compose run --rm cli query run shared-infra --cross-apex --cypher
-```
-
-- **On your machine** the link is `http://localhost:7474/...` and the login form needs no change.
-- **In a codespace** the link uses the codespace's own address, and the command prints one more line: the Connection URL to type into the login form, `neo4j+s://<codespace-name>-7687.app.github.dev:443`. Neo4j Browser reaches the database through GitHub's port forwarding, so before signing in, open `https://<codespace-name>-7687.app.github.dev` once in another tab; GitHub then lets the browser through to that port. The forwarded ports stay private: only the GitHub account that owns the codespace can open them.
+Setup in full, every command with example output, viewing the graph, troubleshooting and running without Docker: [SETUP.md](SETUP.md).
 
 ## Commands
 
@@ -178,39 +121,6 @@ The main decisions are recorded as ADRs in [docs/adr](docs/adr/). The reasoning 
 - **NXDOMAIN is not always NXDOMAIN.** Some DNSSEC-signed zones report a non-existent name as NOERROR with no records. This does not affect the two queries, but it matters for takeover detection; the fix is known and documented.
 - **No subdomain discovery, and only five record types.** Only names in the file, their apex domains, and names reached through CNAMEs are scanned; no NS, SOA, CAA, DMARC or DKIM. Wildcard DNS makes every subdomain look like it exists.
 
-## Troubleshooting
-
-**`dependency failed to start: container …-neo4j-1 exited`**
-
-Neo4j could not start. The usual cause is that ports 7474 or 7687 are already taken, by Neo4j Desktop, another Neo4j or an old container (`docker ps` shows the containers). To use other ports, copy `.env.example` to `.env` and change them:
-
-```
-NEO4J_HTTP_PORT=7475
-NEO4J_BOLT_PORT=7688
-```
-
-The `--cypher` link follows the new HTTP port. In Neo4j Browser's login form, set the connection URL to `localhost:7688`.
-
-If Neo4j still exits after the ports are free, the container may have been left in a broken state by the failed start. Remove the container (the stored graph is kept in its volume) and start again:
-
-```bash
-docker compose rm -f -s neo4j
-```
-
-```bash
-docker compose run --rm cli doctor
-```
-
-`docker compose down -v` starts from nothing: it also deletes the stored graph.
-
-**`doctor` warns that 1.1.1.1 is unreachable.** The network blocks outbound DNS to public resolvers. The tool uses the system resolver instead, so results may differ from the Findings above.
-
-**`The graph is empty`.** Run `ingest` first; each `docker compose down -v` deletes the graph.
-
-**A code change has no effect.** Docker builds the image once and reuses it. Rebuild it with `docker compose build`. A graph stored by an older version is not migrated: run `ingest` again.
-
-**In a codespace, Neo4j Browser cannot connect.** Check that the Connection URL starts with `neo4j+s://` and ends with `:443`, and that the `-7687` address was opened once in a tab of the same browser. The Ports tab at the bottom of VS Code lists both forwarded addresses.
-
 ## Testing
 
 ```bash
@@ -218,17 +128,3 @@ docker compose --profile dev run --rm test
 ```
 
 About 380 tests, 97% line coverage. Unit tests never touch the network: `dig` is replaced by recorded output from BIND, Unbound, 1.1.1.1 and Docker's resolver ([tests/fixtures/dig](tests/fixtures/dig/README.md)). Integration tests run against a real Neo4j that has its own throwaway container, so running them never deletes your graph. One test per query checks that the `--cypher` graph shows exactly what the table shows. GitHub Actions runs ruff, mypy, all tests, and builds the image and runs `doctor` on every push.
-
-## Running without Docker
-
-Needs Python 3.12+, `dig` (bind9 utilities) and a Neo4j 5 server.
-
-```bash
-pip install .
-```
-
-```bash
-NEO4J_URI=bolt://localhost:7687 NEO4J_USER=neo4j NEO4J_PASSWORD=your-password dnsinv doctor
-```
-
-For development, [uv](https://docs.astral.sh/uv/) installs the exact locked versions: `uv sync`. Docker builds the image once and reuses it; after changing the code, rebuild it with `docker compose build`.

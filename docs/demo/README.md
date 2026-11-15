@@ -24,7 +24,7 @@ All sound effects and music are generated in code, so there is nothing to licens
 
 ## Rebuilding
 
-Written for Linux. A GitHub Codespace on this repo works. It needs:
+Written for Linux (the video was built in a GitHub Codespace). It needs:
 - docker, ffmpeg and unzip;
 - [VHS](https://github.com/charmbracelet/vhs);
 - a Python virtualenv at `~/pw` (or set `PY`) with `playwright`, `pillow`, `numpy`, `soundfile` and `kokoro-onnx`, plus `playwright install chromium`;

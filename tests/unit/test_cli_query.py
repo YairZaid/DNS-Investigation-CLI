@@ -215,27 +215,6 @@ def test_cypher_link_follows_a_changed_browser_port(monkeypatch):
     assert "http://localhost:7475/browser/?cmd=edit&arg=" in result.stderr
 
 
-def test_cypher_link_locally_has_no_connection_hint(monkeypatch):
-    monkeypatch.delenv("CODESPACE_NAME", raising=False)
-
-    result = runner.invoke(cli.app, ["query", "run", "shared-infra", "--cypher"])
-
-    assert "http://localhost:7474/browser/?cmd=edit&arg=" in result.stderr
-    assert "neo4j+s://" not in result.stderr
-
-
-def test_cypher_link_inside_a_codespace_uses_its_addresses(monkeypatch):
-    monkeypatch.setenv("CODESPACE_NAME", "dnsinv-test-abc123")
-    monkeypatch.setenv("GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN", "app.github.dev")
-
-    result = runner.invoke(cli.app, ["query", "run", "shared-infra", "--cypher"])
-
-    assert "https://dnsinv-test-abc123-7474.app.github.dev/browser/?cmd=edit&arg=" in (
-        result.stderr
-    )
-    assert "neo4j+s://dnsinv-test-abc123-7687.app.github.dev:443" in result.stderr
-
-
 def test_neo4j_down_exits_two(monkeypatch):
     @contextmanager
     def unavailable(settings, timeout, on_wait=None):
