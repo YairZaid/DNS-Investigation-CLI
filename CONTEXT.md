@@ -43,7 +43,7 @@ _Avoid_: run, crawl, job
 ### Investigation
 
 **Investigation Query**:
-A named, registered question asked of the graph, such as `shared-infra` or `takeover`.
+A named, registered question asked of the graph, such as `shared-infra` or `providers`.
 _Avoid_: report, check, search
 
 **Shared Infrastructure**:
@@ -61,7 +61,3 @@ A CNAME record whose chain ends at a Hostname that no longer resolves or at a Pr
 
 **Fingerprint**:
 A catalogue entry describing how to recognise an unclaimed resource at one Provider: the CNAME suffixes that identify the Provider and the signal (a Lookup Status or an HTTP response marker) that shows the resource is gone.
-
-**Takeover Candidate**:
-A Hostname with a Dangling CNAME that matches a Fingerprint. Its confidence is `high` (DNS signal observed), `needs-verification` (HTTP signal required but not checked), `confirmed` or `not-vulnerable` (after HTTP verification).
-_Avoid_: vulnerable domain, finding
