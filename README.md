@@ -1,6 +1,7 @@
 # DNS Investigation CLI
 
 [![CI](https://github.com/YairZaid/DNS-Investigation-CLI/actions/workflows/ci.yml/badge.svg)](https://github.com/YairZaid/DNS-Investigation-CLI/actions/workflows/ci.yml)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/YairZaid/DNS-Investigation-CLI)
 
 A command-line tool that reads a file of URLs, collects the A, AAAA, MX, TXT and CNAME records of their hostnames with `dig`, stores them as a graph in Neo4j, and answers investigation questions about that graph:
 
@@ -11,12 +12,16 @@ A command-line tool that reads a file of URLs, collects the A, AAAA, MX, TXT and
 
 ## Quick start
 
-**Requirement: Docker** (with Docker Compose). Nothing else: `dig`, Python and Neo4j all run in containers.
+Choose where to run it. The commands are the same in both.
 
-```bash
-git clone https://github.com/YairZaid/DNS-Investigation-CLI.git
-cd DNS-Investigation-CLI
-```
+| | **A. On your machine** | **B. In the browser, nothing installed** |
+|---|---|---|
+| You need | Docker (with Docker Compose) | A GitHub account |
+| Start | `git clone https://github.com/YairZaid/DNS-Investigation-CLI.git`, then `cd DNS-Investigation-CLI` | Click **Open in GitHub Codespaces** above, then **Create codespace**. VS Code opens in the browser; wait until the setup terminal finishes (about two minutes) |
+| Run | The commands below, in a terminal | The commands below, in the terminal at the bottom of the window |
+| Graph | [Viewing the graph](#viewing-the-graph) | [Viewing the graph](#viewing-the-graph) |
+
+`dig`, Python and Neo4j run in containers in both cases. A codespace runs on the free monthly quota of the GitHub account that opens it, stops after 30 idle minutes, and can be deleted at [github.com/codespaces](https://github.com/codespaces).
 
 ```bash
 docker compose run --rm cli doctor
@@ -65,13 +70,18 @@ docker compose run --rm cli query run providers
 docker compose run --rm cli query run outage-impact
 ```
 
-To see a result as a graph, add `--cypher`: it prints a link that opens Neo4j Browser (`http://localhost:7474`, user `neo4j`, password `dnsinv-local`) with the query already in the editor.
+To delete the stored graph: `docker compose down -v`.
+
+### Viewing the graph
+
+Add `--cypher` to any query. It prints a link that opens Neo4j Browser with the query already in the editor; sign in as `neo4j` with password `dnsinv-local` and press **Run**.
 
 ```bash
 docker compose run --rm cli query run shared-infra --cross-apex --cypher
 ```
 
-To delete the stored graph: `docker compose down -v`.
+- **On your machine** the link is `http://localhost:7474/...` and the login form needs no change.
+- **In a codespace** the link uses the codespace's own address, and the command prints one more line: the Connection URL to type into the login form, `neo4j+s://<codespace-name>-7687.app.github.dev:443`. Neo4j Browser reaches the database through GitHub's port forwarding, so before signing in, open `https://<codespace-name>-7687.app.github.dev` once in another tab; GitHub then lets the browser through to that port. The forwarded ports stay private: only the GitHub account that owns the codespace can open them.
 
 ## Commands
 
@@ -208,13 +218,15 @@ docker compose run --rm cli doctor
 
 **A code change has no effect.** Docker builds the image once and reuses it. Rebuild it with `docker compose build`.
 
+**In a codespace, Neo4j Browser cannot connect.** Check that the Connection URL starts with `neo4j+s://` and ends with `:443`, and that the `-7687` address was opened once in a tab of the same browser. The Ports tab at the bottom of VS Code lists both forwarded addresses.
+
 ## Testing
 
 ```bash
 docker compose --profile dev run --rm test
 ```
 
-About 370 tests, 97% line coverage. Unit tests never touch the network: `dig` is replaced by recorded output from BIND, Unbound, 1.1.1.1 and Docker's resolver ([tests/fixtures/dig](tests/fixtures/dig/README.md)). Integration tests run against a real Neo4j that has its own throwaway container, so running them never deletes your graph. One test per query checks that the `--cypher` graph shows exactly what the table shows. GitHub Actions runs ruff, mypy, all tests, and builds the image and runs `doctor` on every push.
+About 380 tests, 97% line coverage. Unit tests never touch the network: `dig` is replaced by recorded output from BIND, Unbound, 1.1.1.1 and Docker's resolver ([tests/fixtures/dig](tests/fixtures/dig/README.md)). Integration tests run against a real Neo4j that has its own throwaway container, so running them never deletes your graph. One test per query checks that the `--cypher` graph shows exactly what the table shows. GitHub Actions runs ruff, mypy, all tests, and builds the image and runs `doctor` on every push.
 
 ## Running without Docker
 

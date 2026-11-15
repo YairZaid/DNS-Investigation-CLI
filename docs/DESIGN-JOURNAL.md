@@ -214,6 +214,18 @@ Smaller decisions made while building the parser, each covered by a test:
 
 **What the first run found.** Fastly is a single point of failure for 7 of the 20 example hostnames in 4 organisations, Python's website, documentation and package index among them. And no hostname in the sample spreads its website or mail servers over two providers: every dependency found is total.
 
+## 20. Running it with nothing installed
+
+**Question.** Docker is the only requirement, but it is still something to install. Could the interviewer run the project without installing anything?
+
+**Options.** A single executable still needs `dig` and Neo4j installed separately. A cloud Neo4j still needs Python and `dig` locally. GitHub Codespaces runs the repository in a cloud machine opened from the browser, so the existing Docker setup works there unchanged.
+
+**How I kept it from breaking what worked.** All of it was built on a separate branch, and the only new file, `.devcontainer/devcontainer.json`, is read by Codespaces and nothing else: Docker Compose, the CLI and CI ignore it. The one code change, the `--cypher` link, depends on two variables that `docker-compose.yml` passes through empty everywhere but Codespaces, and tests cover both cases.
+
+**What was uncertain, and how it was settled.** Tables and queries were sure to work. The graph was not: Neo4j Browser runs at one forwarded address and has to reach the database at another, through GitHub's authentication. I created a real codespace on the branch, ran every README command in it, and the graph was checked in a normal browser. It works with two steps that are not obvious: the `-7687` address has to be opened once so GitHub authorises it, and the Connection URL must be `neo4j+s://…:443`. The `--cypher` command now prints that URL inside a codespace.
+
+**Two things found along the way.** `gh codespace ssh` needs an SSH server in the container, so the dev container adds one. And the Codespaces variables exist only in login shells; the browser terminal is one, an SSH command is not.
+
 ## Open questions
 
 - **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.
