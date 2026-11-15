@@ -199,6 +199,21 @@ Smaller decisions made while building the parser, each covered by a test:
 - DNS text is untrusted. Rich reads `[bold]` as styling and `:smile:` as an emoji, so a TXT record could be silently altered on screen. Both are switched off, and a test checks that such a record prints unchanged.
 - My earlier fix for the first-run warning, `pull_policy: build`, made Compose rebuild the image before *every* command. The clean-clone check missed it because I had filtered build lines out of the output. `pull_policy: never` builds once when the image is missing and never asks Docker Hub; after a code change the image is rebuilt with `docker compose build`.
 
+## 19. An extra feature: outage impact
+
+**The idea.** The two required queries describe what a set of domains *is*: what it shares, whom it uses. I wanted one that says what that *means*: if a provider has an outage, what stops working, and for whom. In June 2021 a single Fastly configuration error took a large part of the web offline for about an hour; this query answers ahead of time which of your domains would be part of that.
+
+**What needed thinking, not just code.**
+
+- **Not every link to a provider is a dependency.** A CNAME into a CDN or an address in its ranges means the website goes down with it. An MX at the provider means incoming mail stops. An SPF include means mail sent through it fails. A domain verification token means nothing at all at run time: it only proves the domain was once verified. `providers` lists all four; `outage-impact` deliberately leaves the last one out.
+- **Fully or partially.** A hostname with addresses or mail servers at two providers survives an outage of one of them, degraded. The query compares how many of the hostname's addresses and mail servers sit at the provider with how many it has in total, and marks the hostname `(partial)` when it is not all of them.
+- **Whose mail servers.** A hostname's mail is handled by the nearest name with MX records: itself, a name it aliases, or its apex domain. Taking the MX records of all of them together would mix two different mail setups.
+- **Ranking.** Providers are sorted by how many hostnames would lose their website or incoming mail entirely, so single points of failure come first.
+
+**It also tested the architecture.** The README claims a new query is one file. This one was: the query definition and its tests, with no change to the CLI, the graph or the collection code. `--cypher`, `--format json` and `--help` came with it.
+
+**What the first run found.** Fastly is a single point of failure for 7 of the 20 example hostnames in 4 organisations, Python's website, documentation and package index among them. And no hostname in the sample spreads its website or mail servers over two providers: every dependency found is total.
+
 ## Open questions
 
 - **Compact denial of existence.** Nonexistent names in some DNSSEC-signed zones are reported as NOERROR (section 13). The fix is known but not implemented.

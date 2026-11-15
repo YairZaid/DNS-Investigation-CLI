@@ -6,6 +6,7 @@ A command-line tool that reads a file of URLs, collects the A, AAAA, MX, TXT and
 
 - **`shared-infra`**: which domains share infrastructure (addresses, CNAME targets, mail servers), and whether that sharing means anything.
 - **`providers`**: which third-party providers each domain depends on, with the DNS evidence for each. This is the additional query of my choice.
+- **`outage-impact`**: what stops working, and for whom, if one provider goes down: websites, incoming mail and outgoing mail, fully or partially. An extra feature built on the same data.
 - **Subdomain takeover**: see [docs/SUBDOMAIN-TAKEOVER.md](docs/SUBDOMAIN-TAKEOVER.md), which explains how it happens, especially with S3 buckets, and shows how the collected data supports detection.
 
 ## Quick start
@@ -60,6 +61,10 @@ docker compose run --rm cli query run shared-infra --cross-apex
 docker compose run --rm cli query run providers
 ```
 
+```bash
+docker compose run --rm cli query run outage-impact
+```
+
 To see a result as a graph, add `--cypher`: it prints a link that opens Neo4j Browser (`http://localhost:7474`, user `neo4j`, password `dnsinv-local`) with the query already in the editor.
 
 ```bash
@@ -102,7 +107,13 @@ From one run of `examples/urls.txt` (20 hostnames of well-known open-source and 
 
 **5. Verification tokens outlive what they verified, or reveal more than mail.** `mozilla.org`, `docker.com` and `npmjs.com` hold Microsoft 365 verification tokens (`MS=ms…`), but their mail goes to Google. The tokens may be left over from a migration, or used for other Microsoft services. Either way, DNS alone shows a relationship the organisation's mail setup does not.
 
-**6. No dangling records in this sample.** Every CNAME chain ends at a name that exists, and no lookup failed. `www.rust-lang.org → rust-lang.github.io` (GitHub Pages) and `learn.microsoft.com → learn-public.trafficmanager.net` (Azure) are the shape a takeover-prone record has; both are healthy. See [docs/SUBDOMAIN-TAKEOVER.md](docs/SUBDOMAIN-TAKEOVER.md).
+**6. One provider outage would take down a whole ecosystem.** `outage-impact` ranks providers by how many hostnames would lose their website or incoming mail entirely. If Fastly went down, 7 hostnames in 4 organisations would lose their website, among them `www.python.org`, `docs.python.org` and `pypi.org` at the same moment: Python's documentation and its package index. A Google Workspace outage would stop incoming mail for 10 of the 20 hostnames. And not one hostname spreads its website or mail servers over two providers: every dependency the tool found is a single point of failure.
+
+```bash
+docker compose run --rm cli query run outage-impact --provider fastly
+```
+
+**7. No dangling records in this sample.** Every CNAME chain ends at a name that exists, and no lookup failed. `www.rust-lang.org → rust-lang.github.io` (GitHub Pages) and `learn.microsoft.com → learn-public.trafficmanager.net` (Azure) are the shape a takeover-prone record has; both are healthy. See [docs/SUBDOMAIN-TAKEOVER.md](docs/SUBDOMAIN-TAKEOVER.md).
 
 ## Design
 
@@ -139,7 +150,7 @@ A record belongs to the name that owns it. With CNAMEs that is often not the nam
 
 | To add | Change |
 |---|---|
-| An investigation query | One file in `src/dnsinv/queries/definitions/`. It appears in `query list` and gets its own subcommand. |
+| An investigation query | One file in `src/dnsinv/queries/definitions/`. It appears in `query list` and gets its own subcommand. `outage-impact` was added this way, after the rest was finished: one new file and its tests, no other code changed. |
 | A provider | One entry in `providers.yaml`. No code. |
 | A record type (NS, CAA) | The parser in `collection/dig.py` and one write in `graph/store.py`. |
 
@@ -159,6 +170,7 @@ The main decisions are recorded as ADRs in [docs/adr](docs/adr/). The reasoning 
 - **One point of view.** Answers depend on the resolver and the location. CDNs answer differently from query to query: the same file scanned twice returned different IPv6 addresses for one Akamai name. Findings are a sample, not a census.
 - **The provider catalog is partial.** About 35 providers. In the example scan, `www.docker.com` goes through Pantheon and `www.mozilla.org` through `fastly-edge.com`, and neither is recognised. Address ranges were checked against the providers' published lists on 2026-11-14 and will age.
 - **Shared IP is not proof of a relationship.** The tool marks known shared platforms, but cannot mark the ones it does not know.
+- **Outage impact sees only what DNS shows.** A provider missing from the catalog does not appear. DNS hosting itself (NS records) is not collected, although a DNS provider outage takes everything down. "Partial" counts addresses and mail servers; it does not know how traffic is actually split between them.
 - **NXDOMAIN is not always NXDOMAIN.** Some DNSSEC-signed zones report a non-existent name as NOERROR with no records. This does not affect the two queries, but it matters for takeover detection; the fix is known and documented.
 - **No subdomain discovery.** Only names in the file, their apex domains, and names reached through CNAMEs are scanned. No NS, SOA, CAA, DMARC or DKIM records.
 - **Wildcard DNS** makes every subdomain look like it exists.
@@ -202,7 +214,7 @@ docker compose run --rm cli doctor
 docker compose --profile dev run --rm test
 ```
 
-About 360 tests, 97% line coverage. Unit tests never touch the network: `dig` is replaced by recorded output from BIND, Unbound, 1.1.1.1 and Docker's resolver ([tests/fixtures/dig](tests/fixtures/dig/README.md)). Integration tests run against a real Neo4j that has its own throwaway container, so running them never deletes your graph. One test per query checks that the `--cypher` graph shows exactly what the table shows. GitHub Actions runs ruff, mypy, all tests, and builds the image and runs `doctor` on every push.
+About 370 tests, 97% line coverage. Unit tests never touch the network: `dig` is replaced by recorded output from BIND, Unbound, 1.1.1.1 and Docker's resolver ([tests/fixtures/dig](tests/fixtures/dig/README.md)). Integration tests run against a real Neo4j that has its own throwaway container, so running them never deletes your graph. One test per query checks that the `--cypher` graph shows exactly what the table shows. GitHub Actions runs ruff, mypy, all tests, and builds the image and runs `doctor` on every push.
 
 ## Running without Docker
 
