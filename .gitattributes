@@ -1,2 +1,5 @@
 # Files are used inside Linux containers; keep LF endings even on Windows.
 * text=auto eol=lf
+
+# Scripts that build the demo video: kept on GitHub, left out of the submission ZIP.
+docs/demo export-ignore
